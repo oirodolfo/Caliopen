@@ -103,7 +103,8 @@ paths:
 ## notifications
   "/v2/notifications":
     "$ref": paths/notifications.yaml#/notifications
-
+  "/v2/notifications/{notification_id}":
+    "$ref": paths/notifications.yaml#/notifications_{notification_id}
 securityDefinitions:
   basicAuth:
     type: basic

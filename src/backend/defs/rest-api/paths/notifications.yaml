@@ -42,7 +42,7 @@ notifications:
         schema:
           "$ref": "../objects/Error.yaml"
   delete:
-    description: Delete pending notifications
+    description: Delete pending notifications by time range
     tags:
     - notifications
     security:
@@ -68,5 +68,61 @@ notifications:
         description: Unauthorized access
         schema:
           "$ref": "../objects/Error.yaml"
-
+notifications_{notification_id}:
+  get:
+    description: Returns a notification
+    tags:
+    - notifications
+    security:
+    - basicAuth: []
+    parameters:
+    - name: notification_id
+      in: path
+      type: string
+      required: true
+    produces:
+    - application/json
+    responses:
+      '200':
+        description: Notification found
+        schema:
+          "$ref": "../objects/Notification.yaml"
+      '400':
+        description: malform request
+        schema:
+          type: object
+          "$ref": "../objects/Error.yaml"
+      '404':
+        description: Message not found
+        schema:
+          "$ref": "../objects/Error.yaml"
+      '401':
+        description: Unauthorized access
+        schema:
+          "$ref": "../objects/Error.yaml"
+  delete:
+    description: Delete a notification
+    tags:
+    - notifications
+    security:
+    - basicAuth: []
+    parameters:
+    - name: notification_id
+      in: path
+      type: string
+      required: true
+    produces:
+    - application/json
+    responses:
+      '204':
+        description: deletion executed, no body returned.
+      '400':
+        description: malform request
+        schema:
+          type: object
+          "$ref": "../objects/Error.yaml"
+      '401':
+        description: Unauthorized access
+        schema:
+          "$ref": "../objects/Error.yaml"
 

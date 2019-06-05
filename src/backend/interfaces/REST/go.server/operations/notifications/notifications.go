@@ -10,6 +10,7 @@ import (
 	"bytes"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
 	"github.com/CaliOpen/Caliopen/src/backend/interfaces/REST/go.server/middlewares"
+	"github.com/CaliOpen/Caliopen/src/backend/interfaces/REST/go.server/operations"
 	"github.com/CaliOpen/Caliopen/src/backend/main/go.main"
 	"github.com/gin-gonic/gin"
 	swgErr "github.com/go-openapi/errors"
@@ -28,10 +29,6 @@ func GetPendingNotif(ctx *gin.Context) {
 	userId := ctx.MustGet("user_id").(string)
 	to_param := ctx.Query("to")
 	from_param := ctx.Query("from")
-
-	if from_param == "" && to_param == "" {
-
-	}
 
 	var to_kind, from_kind string
 	uuidv1Regex := regexp.MustCompile(`[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-1[0-9a-fA-F]{3}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}`)
@@ -187,6 +184,68 @@ func DeleteNotifications(ctx *gin.Context) {
 			return
 		} else {
 			returnedErr = swgErr.CompositeValidationError(err, err.Cause())
+		}
+		http_middleware.ServeError(ctx.Writer, ctx.Request, returnedErr)
+		ctx.Abort()
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}
+
+// GetNotification handles GET /notifications/:notification_id
+func GetNotification(ctx *gin.Context) {
+	userID, err := operations.NormalizeUUIDstring(ctx.MustGet("user_id").(string))
+	notificationID, err := operations.NormalizeUUIDstring(ctx.Param("notification_id"))
+
+	if err != nil {
+		e := swgErr.New(http.StatusUnprocessableEntity, err.Error())
+		http_middleware.ServeError(ctx.Writer, ctx.Request, e)
+		ctx.Abort()
+		return
+	}
+
+	notif, e := caliopen.Facilities.Notifiers.RetrieveNotification(userID, notificationID)
+	if e != nil {
+		returnedErr := new(swgErr.CompositeError)
+		if e.Code() == DbCaliopenErr && e.Cause().Error() == "not found" {
+			returnedErr = swgErr.CompositeValidationError(swgErr.New(http.StatusNotFound, "db returned not found"), e, e.Cause())
+		} else {
+			returnedErr = swgErr.CompositeValidationError(e, e.Cause())
+		}
+		http_middleware.ServeError(ctx.Writer, ctx.Request, returnedErr)
+		ctx.Abort()
+		return
+	} else {
+		notif_json, err := notif.MarshalFrontEnd()
+		if err != nil {
+			e := swgErr.New(http.StatusFailedDependency, err.Error())
+			http_middleware.ServeError(ctx.Writer, ctx.Request, e)
+			ctx.Abort()
+		} else {
+			ctx.Data(http.StatusOK, "application/json; charset=utf-8", notif_json)
+		}
+	}
+}
+
+// DeleteNotification handles DELETE /notifications/:notification_id
+func DeleteNotification(ctx *gin.Context) {
+	userID, err := operations.NormalizeUUIDstring(ctx.MustGet("user_id").(string))
+	notificationID, err := operations.NormalizeUUIDstring(ctx.Param("notification_id"))
+
+	if err != nil {
+		e := swgErr.New(http.StatusUnprocessableEntity, err.Error())
+		http_middleware.ServeError(ctx.Writer, ctx.Request, e)
+		ctx.Abort()
+		return
+	}
+
+	e := caliopen.Facilities.Notifiers.DeleteNotification(userID, notificationID)
+	if err != nil {
+		returnedErr := new(swgErr.CompositeError)
+		if e.Code() == DbCaliopenErr && e.Cause().Error() == "not found" {
+			returnedErr = swgErr.CompositeValidationError(swgErr.New(http.StatusNotFound, "db returned not found"), e, e.Cause())
+		} else {
+			returnedErr = swgErr.CompositeValidationError(e, e.Cause())
 		}
 		http_middleware.ServeError(ctx.Writer, ctx.Request, returnedErr)
 		ctx.Abort()

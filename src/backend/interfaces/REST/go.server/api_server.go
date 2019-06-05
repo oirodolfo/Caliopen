@@ -293,6 +293,8 @@ func (server *REST_API) AddHandlers(api *gin.RouterGroup) {
 	notif := api.Group("/notifications", http_middleware.BasicAuthFromCache(caliopen.Facilities.Cache, "caliopen"))
 	notif.GET("", notifications.GetPendingNotif)
 	notif.DELETE("", notifications.DeleteNotifications)
+	notif.GET("/:notification_id", notifications.GetNotification)
+	notif.DELETE("/:notification_id", notifications.DeleteNotification)
 
 	/** providers **/
 	prov := api.Group("/providers")
