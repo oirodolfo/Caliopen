@@ -142,7 +142,7 @@ func (cb *CassandraBackend) DeleteNotifications(userId string, until time.Time) 
 	iter := cb.SessionQuery(query_builder.String(), values...).Iter()
 
 	for iter.Scan(&notifId) {
-		e := cb.SessionQuery(`DELETE FROM notification WHERE user_id = ? AND notif_id = ?`, userId, notifId).Exec()
+		e := cb.DeleteNotification(userId, notifId.String())
 		if e != nil {
 			log.WithError(e).Warnf("[DeleteNotifications] failed to delete notif %s for user %s", notifId.String(), userId)
 		}
@@ -152,4 +152,22 @@ func (cb *CassandraBackend) DeleteNotifications(userId string, until time.Time) 
 		return err
 	}
 	return nil
+}
+
+func (cb *CassandraBackend) RetrieveNotification(userID, notifID string) (notif Notification, err error) {
+	notifs, err := cb.SessionQuery(`SELECT * FROM notification WHERE user_id = ? AND notif_id = ?`, userID, notifID).Iter().SliceMap()
+	if err != nil {
+		return
+	}
+	if len(notifs) == 0 {
+		err = errors.New("not found")
+		return
+	}
+	notif = Notification{}
+	notif.UnmarshalCQLMap(notifs[0])
+	return notif, nil
+}
+
+func (cb *CassandraBackend) DeleteNotification(userID, notifID string) error {
+	return cb.SessionQuery(`DELETE FROM notification WHERE user_id = ? AND notif_id = ?`, userID, notifID).Exec()
 }

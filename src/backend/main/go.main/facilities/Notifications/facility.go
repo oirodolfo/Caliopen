@@ -22,7 +22,9 @@ type (
 		ByNotifQueue(*Notification) CaliopenError
 		NotificationsByTime(userId string, from, to time.Time) ([]Notification, CaliopenError)
 		NotificationsByID(userId, from, to string) ([]Notification, CaliopenError)
+		RetrieveNotification(userId, notificationId string) (Notification, CaliopenError)
 		DeleteNotifications(userId string, until time.Time) CaliopenError
+		DeleteNotification(userId, notificationId string) CaliopenError
 	}
 
 	Notifier struct {
@@ -147,6 +149,14 @@ func (N *Notifier) NotificationsByID(userId, from, to string) ([]Notification, C
 	return notifs, nil
 }
 
+func (N *Notifier) RetrieveNotification(userID, notifID string) (Notification, CaliopenError) {
+	notif, err := N.Store.RetrieveNotification(userID, notifID)
+	if err != nil {
+		return Notification{}, WrapCaliopenErr(err, DbCaliopenErr, "[RetrieveNotification] failed")
+	}
+	return notif, nil
+}
+
 func (N *Notifier) DeleteNotifications(userId string, until time.Time) CaliopenError {
 
 	err := N.Store.DeleteNotifications(userId, until)
@@ -158,5 +168,10 @@ func (N *Notifier) DeleteNotifications(userId string, until time.Time) CaliopenE
 }
 
 func (N *Notifier) DeleteNotification(userID, notifID string) CaliopenError {
-	return NewCaliopenErr(NotImplementedCaliopenErr, "not implemented")
+	err := N.Store.DeleteNotification(userID, notifID)
+	if err != nil {
+		return WrapCaliopenErr(err, DbCaliopenErr, "[Notifier]DeleteNotifications failed")
+	}
+
+	return nil
 }

@@ -16,7 +16,9 @@ type NotificationsStore interface {
 	PutNotificationInQueue(*Notification) error
 	NotificationsByTime(userId string, from, to time.Time) ([]Notification, error)
 	NotificationsByID(userId, from, to string) ([]Notification, error)
+	RetrieveNotification(userId, notificationId string) (Notification, error)
 	DeleteNotifications(userId string, until time.Time) error
+	DeleteNotification(userId, notificationId string) error
 }
 
 type NotificationsIndex interface {
