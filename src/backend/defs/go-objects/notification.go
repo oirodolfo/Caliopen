@@ -19,17 +19,19 @@ type Notification struct {
 	Type            string      // a single word to describe message's type and give indication of importance level (event, info, feedback, warning, teaser, error, alert, etc.)
 	TTLcode         string      // chars to pickup default duration into notification_ttl table.
 	User            *User       // only userId will be exported
+	Children        []Notification
 }
 
 // model to queue a notification in cassandra or marshal one to json
 type NotificationModel struct {
 	// PRIMARY KEYS (user_id, notif_id)
-	Body      string `cql:"body"         json:"body"`
-	Emitter   string `cql:"emitter"      json:"emitter"`
-	NotifId   string `cql:"notif_id"     json:"notif_id"`
-	Reference string `cql:"reference"    json:"reference"`
-	Type      string `cql:"type"         json:"type"`
-	UserId    string `cql:"user_id"      json:"user_id"          frontend:"omit"`
+	Body      string              `cql:"body"         json:"body,omitempty"`
+	Emitter   string              `cql:"emitter"      json:"emitter,omitempty"`
+	NotifId   string              `cql:"notif_id"     json:"notif_id,omitempty"`
+	Reference string              `cql:"reference"    json:"reference,omitempty"`
+	Type      string              `cql:"type"         json:"type,omitempty"`
+	UserId    string              `cql:"user_id"      json:"user_id"          frontend:"omit"`
+	Children  []NotificationModel `cql:"-"            json:"children,omitempty"`
 }
 
 // model to retrieve default durations for TTLcodes
@@ -69,6 +71,20 @@ func (n *Notification) MarshalFrontEnd() ([]byte, error) {
 		Reference: n.Reference,
 		Type:      n.Type,
 		UserId:    n.User.UserId.String(),
+	}
+	if len(n.Children) > 0 {
+		sibling.Children = make([]NotificationModel, len(n.Children))
+		for i, child := range n.Children {
+			c := NotificationModel{
+				Body:      child.Body,
+				Emitter:   child.Emitter,
+				NotifId:   child.NotifId.String(),
+				Reference: child.Reference,
+				Type:      child.Type,
+				UserId:    child.User.UserId.String(),
+			}
+			sibling.Children[i] = c
+		}
 	}
 	return JSONMarshaller("frontend", &sibling)
 }

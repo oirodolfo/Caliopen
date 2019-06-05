@@ -23,6 +23,8 @@ notifications:
     reference: string    // (optional) a reference number previously sent by frontend to link current notification to a previous action/event.  
     timestamp: int       // unix timestamp at which backend created the notification  
     body: string         // could be a simple word or a more complex structure like a json, depending of the notification.  
+    children:            // an array of notifications. It allows to embed the result of a batch operation
+     - notification
 ```
 
 ##### Les messages de notification comportent des 'headers' et un 'body'.
@@ -43,28 +45,18 @@ le header `timestamp` est le timestamp unix du moment où la notification a ét�
 
 #### Exemples de notifications :
 
-##### notification de réception de email(s) :
+##### notification générique de réception de messages :
 
 ```yaml  
 notifications:  
-  - emitter: lmtp  
+  - emitter: notifier  
     id: xxxxx-xxxxx-xxxxx  
-    type: event  
+    type: new_message  
     timestamp: 1518691674517  
     body:  
-      emailReceived: xxxxxx-xxxxx-xxxxx // uuid of new email  
-  - emitter: lmtp  
-    id: xxxxx-xxxxx-xxxxx  
-    type: event  
-    timestamp: 1518691674517  
-    body:  
-      emailReceived: xxxxxx-xxxxx-xxxxx // uuid of new email  
-  - emitter: lmtp  
-    id: xxxxx-xxxxx-xxxxx  
-    type: event  
-    timestamp: 1518691674517  
-    body:  
-      emailReceived: xxxxxx-xxxxx-xxxxx // uuid of new email  
+      message_id: xxxxxx-xxxxx-xxxxx
+      discussion_id: yyyyy-yyyy-yyyyy
+      type: email
 ```
 
 ##### notification de fin d'import de vCards :
@@ -77,10 +69,20 @@ lors de son prochain call sur GET /v2/notifications, il pourrait recevoir la not
 notifications:  
   - emitter: contacts  
     id: xxxxxx-xxxxx-xxxxx  
-    type: feedback  
+    type: import_result
     reference: xxxxxxxxx     // could be a hash of the initial call to the API (POST /v1/imports + timestamp (+ headers ?))  
     timestamp: 1518691674517  
-    body: success  
+    children:
+     - body:
+        contact_id: xxx
+        status: imported
+     - body:
+        contact_id: yyy
+        status: error
+        error_msg: "something went wrong"
+     - body:
+        contact_id: zzz
+        status: ignored
 ```
 
 ##### notification d'échec d'envoi de email :
@@ -179,7 +181,7 @@ Le serveur répond avec un payload en JSON et ferme la connexion.
 `GET` pour obtenir des notifications en file d'attente :
 
 - sans params dans la query, toutes les notifications de la file d'attente sont retournées dans un seul document.
-- 2 params optionnels : `from` et `to` pour filtrer les notifications par timestamp.
+- 2 params optionnels : `from` et `to` pour filtrer les notifications par timestamp ou par IDs de notifications (en effet les IDs des notifs sont des séquences alphanumériques qui grandissent avec le temps)
 
 `DELETE` pour supprimer des notifications de la file d'attente
 
@@ -207,7 +209,7 @@ Le frontend peut refaire un `GET` xx secondes plus tard, il aura la même pile d
 
 Le frontend peut refaire un `GET` xx secondes plus tard en ajoutant le param from=xxxxxxx pour ne recevoir que les dernières notifications arrivées depuis son dernier call (ou depuis le timestamp de la notification la plus récente qu'il a reçu lors du dernier call)
 
-Le frontend peut explicitement purger la pile de notifications côté backend en faisant un call `DELETE` avec le param `until`
+Le frontend peut explicitement purger la pile de notifications côté backend en faisant un call `DELETE` avec le param `until` ou un numéro de notification
 
 ### Modèle de données :
 

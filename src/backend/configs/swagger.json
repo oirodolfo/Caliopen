@@ -13063,6 +13063,30 @@
                       },
                       "user_id": {
                         "type": "string"
+                      },
+                      "children": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "body": {
+                              "type": "string"
+                            },
+                            "emitter": {
+                              "type": "string"
+                            },
+                            "notif_id": {
+                              "description": "notif_id is UUIDv1, including a timestamp",
+                              "type": "string"
+                            },
+                            "reference": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "type": "string"
+                            }
+                          }
+                        }
                       }
                     },
                     "additionalProperties": false
