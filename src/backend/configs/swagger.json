@@ -13014,17 +13014,15 @@
             "name": "from",
             "in": "query",
             "required": false,
-            "description": "oldest timestamp to retrieve (older notifications will not be fetched). RFC3339 format.",
-            "type": "string",
-            "format": "date-time"
+            "description": "oldest timestamp or uuid to retrieve (older notifications will not be fetched). RFC3339 format if time, UUIDv1 if id.",
+            "type": "string"
           },
           {
             "name": "to",
             "in": "query",
             "required": false,
-            "description": "earlest timestamp to retrieve (earler notifications will not be fetched). RFC3339 format.",
-            "type": "string",
-            "format": "date-time"
+            "description": "earlest timestamp or uuid to retrieve (earler notifications will not be fetched). RFC3339 format if time, UUIDv1 if id.",
+            "type": "string"
           }
         ],
         "produces": [

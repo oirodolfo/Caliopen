@@ -10,15 +10,13 @@ notifications:
     - name: from
       in: query
       required: false
-      description: oldest timestamp to retrieve (older notifications will not be fetched). RFC3339 format.
+      description: oldest timestamp or uuid to retrieve (older notifications will not be fetched). RFC3339 format if time, UUIDv1 if id.
       type: string
-      format: date-time
     - name: to
       in: query
       required: false
-      description: earlest timestamp to retrieve (earler notifications will not be fetched). RFC3339 format.
+      description: earlest timestamp or uuid to retrieve (earler notifications will not be fetched). RFC3339 format if time, UUIDv1 if id.
       type: string
-      format: date-time
     produces:
     - application/json
     responses:

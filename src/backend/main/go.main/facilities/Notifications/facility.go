@@ -20,7 +20,8 @@ type (
 	Notifiers interface {
 		ByEmail(*Notification) CaliopenError
 		ByNotifQueue(*Notification) CaliopenError
-		RetrieveNotifications(userId string, from, to time.Time) ([]Notification, CaliopenError)
+		NotificationsByTime(userId string, from, to time.Time) ([]Notification, CaliopenError)
+		NotificationsByID(userId, from, to string) ([]Notification, CaliopenError)
 		DeleteNotifications(userId string, until time.Time) CaliopenError
 	}
 
@@ -126,9 +127,19 @@ func (N *Notifier) LogNotification(method string, notif *Notification) {
 	}
 }
 
-func (N *Notifier) RetrieveNotifications(userId string, from, to time.Time) ([]Notification, CaliopenError) {
+func (N *Notifier) NotificationsByTime(userId string, from, to time.Time) ([]Notification, CaliopenError) {
 
-	notifs, err := N.Store.RetrieveNotifications(userId, from, to)
+	notifs, err := N.Store.NotificationsByTime(userId, from, to)
+	if err != nil {
+		return []Notification{}, WrapCaliopenErr(err, DbCaliopenErr, "[RetrieveNotifications] failed")
+	}
+
+	return notifs, nil
+}
+
+func (N *Notifier) NotificationsByID(userId, from, to string) ([]Notification, CaliopenError) {
+
+	notifs, err := N.Store.NotificationsByID(userId, from, to)
 	if err != nil {
 		return []Notification{}, WrapCaliopenErr(err, DbCaliopenErr, "[RetrieveNotifications] failed")
 	}
@@ -144,4 +155,8 @@ func (N *Notifier) DeleteNotifications(userId string, until time.Time) CaliopenE
 	}
 
 	return nil
+}
+
+func (N *Notifier) DeleteNotification(userID, notifID string) CaliopenError {
+	return NewCaliopenErr(NotImplementedCaliopenErr, "not implemented")
 }
