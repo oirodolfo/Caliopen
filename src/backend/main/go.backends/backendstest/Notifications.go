@@ -29,10 +29,24 @@ func (ns NotificationsStore) RetrieveLocalsIdentities(userId string) (identities
 func (ns NotificationsStore) PutNotificationInQueue(*Notification) error {
 	return errors.New("test interface not implemented")
 }
-func (ns NotificationsStore) RetrieveNotifications(userId string, from, to time.Time) ([]Notification, error) {
-	return nil, errors.New("test interface not implemented")
-}
+
 func (ns NotificationsStore) DeleteNotifications(userId string, until time.Time) error {
+	return errors.New("test interface not implemented")
+}
+
+func (ns NotificationsStore) NotificationsByTime(userId string, from, to time.Time) ([]Notification, error) {
+
+	return []Notification{}, errors.New("test interface not implemented")
+}
+func (ns NotificationsStore) NotificationsByID(userId, from, to string) ([]Notification, error) {
+
+	return []Notification{}, errors.New("test interface not implemented")
+}
+func (ns NotificationsStore) RetrieveNotification(userId, notificationId string) (Notification, error) {
+
+	return Notification{}, errors.New("test interface not implemented")
+}
+func (ns NotificationsStore) DeleteNotification(userId, notificationId string) error {
 	return errors.New("test interface not implemented")
 }
 
