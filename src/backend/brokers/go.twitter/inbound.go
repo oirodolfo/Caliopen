@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
+	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
 	"github.com/CaliOpen/go-twitter/twitter"
 	log "github.com/Sirupsen/logrus"
 	"github.com/satori/go.uuid"
@@ -30,7 +31,7 @@ const (
 //      sending natsOrderRaw for other stack components
 //      sending new message notification if everything went good
 //      updating remote identity state in db
-func (broker *TwitterBroker) ProcessInDM(userID, remoteID UUID, dm *twitter.DirectMessageEvent, rawOnly bool) error {
+func (broker *TwitterBroker) ProcessInDM(userID, remoteID UUID, dm *twitter.DirectMessageEvent, rawOnly bool, batch *Notifications.BatchNotification) error {
 
 	rawID, err := broker.SaveRawDM(dm, userID)
 	if err != nil {
@@ -74,7 +75,11 @@ func (broker *TwitterBroker) ProcessInDM(userID, remoteID UUID, dm *twitter.Dire
 		NotifId: UUID(uuid.NewV1()),
 		Body:    `{"dmReceived": "` + (*nats_ack)["message_id"].(string) + `"}`,
 	}
-	go broker.Notifier.ByNotifQueue(&notif)
+	if batch != nil {
+		batch.Add(notif)
+	} else {
+		go broker.Notifier.ByNotifQueue(&notif)
+	}
 	// update raw_message table to set raw_message.delivered=true
 	go broker.Store.SetDeliveredStatus(rawID.String(), true)
 	return nil

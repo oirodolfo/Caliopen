@@ -16,6 +16,7 @@ import (
 
 	broker "github.com/CaliOpen/Caliopen/src/backend/brokers/go.twitter"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
+	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
 	"github.com/CaliOpen/go-twitter/twitter"
 	log "github.com/Sirupsen/logrus"
 	"github.com/dghubble/oauth1"
@@ -311,6 +312,7 @@ func (worker *AccountHandler) PollDM() {
 	}
 
 	log.Infof("[AccountHandler %s] PollDM %d events retrieved", worker.userAccount.remoteID.String(), len(DMs.Events))
+	batch := Notifications.NewBatch("twitter_worker")
 	for _, event := range DMs.Events {
 		if worker.dmNotSeen(event) {
 			//lookup sender & recipient's screen_names because there are not embedded in event object
@@ -324,8 +326,7 @@ func (worker *AccountHandler) PollDM() {
 				continue // we don't want to inject a message with an incomplete participant
 			}
 			(*event.Message).Target.RecipientScreenName = accountName
-
-			err = worker.broker.ProcessInDM(worker.userAccount.userID, worker.userAccount.remoteID, &event, true)
+			err = worker.broker.ProcessInDM(worker.userAccount.userID, worker.userAccount.remoteID, &event, true, batch)
 			if err != nil {
 				// something went wrong, forget this DM
 				log.WithError(err).Warnf("[AccountHandler %s] ProcessInDM failed for event : %+v", worker.userAccount.remoteID.String(), event)
@@ -343,7 +344,7 @@ func (worker *AccountHandler) PollDM() {
 			}
 		}
 	}
-
+	batch.Save(worker.broker.Notifier, "", LongLived)
 }
 
 func (worker *AccountHandler) dmNotSeen(event twitter.DirectMessageEvent) bool {
