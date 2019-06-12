@@ -34,7 +34,7 @@ type NotificationModel struct {
 	Reference string              `cql:"reference"    json:"reference,omitempty"`
 	Type      string              `cql:"type"         json:"type,omitempty"`
 	UserId    string              `cql:"user_id"      json:"user_id"          frontend:"omit"`
-	Children  []NotificationModel `cql:"-"            json:"children,omitempty"`
+	Children  []NotificationModel `cql:"-"            json:"-"`
 }
 
 // model to retrieve default durations for TTLcodes
@@ -106,7 +106,7 @@ func (n *Notification) UnmarshalCQLMap(input map[string]interface{}) {
 		n.NotifId.UnmarshalBinary(id.Bytes())
 	}
 
-	if body, ok := input["body"].(string); ok {
+	if body, ok := input["body"].([]byte); ok {
 		n.Body = string(body)
 	}
 	// body should be a json document

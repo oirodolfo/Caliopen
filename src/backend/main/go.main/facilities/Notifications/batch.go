@@ -89,7 +89,7 @@ func (bn *BatchNotification) aggregate(reference, ttl string) (Notification, err
 	}
 	body := strings.Builder{}
 	body.WriteString(`{"children_count":`)
-	body.WriteString(strconv.Itoa(len(bn.notifications)) + ",")
+	body.WriteString(strconv.Itoa(bn.notificationsCount) + ",")
 	body.WriteString(`"children":`)
 	body.WriteString(string(jChildren))
 	body.WriteString(`}`)

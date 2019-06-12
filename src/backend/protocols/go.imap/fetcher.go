@@ -188,8 +188,9 @@ func (f *Fetcher) FetchRemoteToLocal(order IMAPorder) error {
 
 	// 3. forward mails to lda
 	errs := make([]error, len(mails))
+	batch := Notifications.NewBatch("imap_worker")
 	for mail := range mails {
-		err := f.Lda.deliverMail(mail, order.UserId, order.IdentityId)
+		err := f.Lda.deliverMail(mail, order.UserId, order.IdentityId, batch)
 		errs = append(errs, err)
 	}
 
