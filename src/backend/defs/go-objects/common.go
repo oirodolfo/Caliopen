@@ -206,6 +206,10 @@ func marshallField(obj interface{}, field, context string, jsonBuf *bytes.Buffer
 				switch j_formatter {
 				case "RFC3339Milli":
 					jsonBuf.WriteString("\"" + field_value.(time.Time).Format(RFC3339Milli) + "\"")
+				case "raw":
+					if fieldKind == reflect.String {
+						jsonBuf.WriteString(field_value.(string))
+					}
 				default:
 					var b []byte
 					var e error
