@@ -72,7 +72,7 @@ notifications:
     type: import_result
     reference: xxxxxxxxx     // could be a hash of the initial call to the API (POST /v1/imports + timestamp (+ headers ?))  
     timestamp: 1518691674517  
-    children:
+    body:
      - body:
         contact_id: xxx
         status: imported
