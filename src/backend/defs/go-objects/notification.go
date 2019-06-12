@@ -8,6 +8,8 @@ package objects
 
 import (
 	"github.com/gocql/gocql"
+	"github.com/satori/go.uuid"
+	"github.com/tidwall/gjson"
 )
 
 type Notification struct {
@@ -20,12 +22,13 @@ type Notification struct {
 	TTLcode         string      // chars to pickup default duration into notification_ttl table.
 	User            *User       // only userId will be exported
 	Children        []Notification
+	ChildrenCount   int // in case they are too many children, children will be empty but not ChildrenCount
 }
 
 // model to queue a notification in cassandra or marshal one to json
 type NotificationModel struct {
 	// PRIMARY KEYS (user_id, notif_id)
-	Body      string              `cql:"body"         json:"body,omitempty"`
+	Body      string              `cql:"body"         json:"body,omitempty"    formatter:"raw"` // our bespoke jsonMarshaler will not escape this string, thus it could embed json object
 	Emitter   string              `cql:"emitter"      json:"emitter,omitempty"`
 	NotifId   string              `cql:"notif_id"     json:"notif_id,omitempty"`
 	Reference string              `cql:"reference"    json:"reference,omitempty"`
@@ -51,6 +54,7 @@ const (
 	TeaserNotif   = "teaser"
 	ErrorNotif    = "error"
 	AlertNotif    = "alert"
+	BatchNotif    = "batch"
 
 	// TTL codes stored in notification_ttl table
 	ShortLived = "short-lived"
@@ -102,8 +106,32 @@ func (n *Notification) UnmarshalCQLMap(input map[string]interface{}) {
 		n.NotifId.UnmarshalBinary(id.Bytes())
 	}
 
-	if body, ok := input["body"].([]byte); ok {
+	if body, ok := input["body"].(string); ok {
 		n.Body = string(body)
+	}
+	// body should be a json document
+	// it may embed children notifications that need to be extracted to the children property
+	if gjson.Valid(n.Body) {
+		if children := gjson.Get(n.Body, "children"); children.IsArray() {
+			n.Children = []Notification{}
+			children.ForEach(func(key, value gjson.Result) bool {
+				if value.IsObject() {
+					var child NotificationModel
+					if err := gjson.Unmarshal([]byte(value.Raw), &child); err == nil {
+						n.Children = append(n.Children, Notification{
+							Body:      child.Body,
+							Emitter:   child.Emitter,
+							NotifId:   UUID(uuid.FromStringOrNil(child.NotifId)),
+							Reference: child.Reference,
+							Type:      child.Type,
+							User:      &User{UserId: UUID(uuid.FromStringOrNil(child.UserId))},
+						})
+					}
+				}
+				return true
+			})
+		}
+		n.ChildrenCount = int(gjson.Get(n.Body, "children_count").Int())
 	}
 
 	if emitter, ok := input["emitter"].(string); ok {
@@ -117,4 +145,10 @@ func (n *Notification) UnmarshalCQLMap(input map[string]interface{}) {
 	if typ, ok := input["type"].(string); ok {
 		n.Type = typ
 	}
+}
+
+// MarshalJSON implements json.Marshaler interface
+// using a bespoke implementation allows to embed notification's body as a json object instead of a string
+func (n *NotificationModel) MarshalJSON() ([]byte, error) {
+	return JSONMarshaller("frontend", n)
 }
