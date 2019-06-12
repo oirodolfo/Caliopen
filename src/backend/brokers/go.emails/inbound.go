@@ -49,7 +49,7 @@ func (b *EmailBroker) incomingSmtpWorker() {
 			}
 			select {
 			case in.Response <- ack:
-			//write was OK
+				//write was OK
 			default:
 				//unable to write, don't block
 			}
@@ -235,7 +235,11 @@ func (b *EmailBroker) processInbound(rcptsIds [][]UUID, in *SmtpEmail, raw_only 
 					NotifId: UUID(uuid.NewV1()),
 					Body:    `{"emailReceived": "` + (*nats_ack)["message_id"].(string) + `"}`,
 				}
-				go b.Notifier.ByNotifQueue(&notif)
+				if in.Batch != nil {
+					in.Batch.Add(notif)
+				} else {
+					go b.Notifier.ByNotifQueue(&notif)
+				}
 			}
 		}(rcptId, &errs)
 	}

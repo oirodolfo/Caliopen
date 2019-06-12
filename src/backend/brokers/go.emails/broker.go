@@ -39,6 +39,7 @@ type (
 		EmailMessage *EmailMessage
 		MTAparams    *MTAparams
 		Response     chan *EmailDeliveryAck
+		Batch        *Notifications.BatchNotification
 	}
 
 	natsOrder struct {
