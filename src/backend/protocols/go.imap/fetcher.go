@@ -11,6 +11,7 @@ import (
 	"errors"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
 	"github.com/CaliOpen/Caliopen/src/backend/main/go.backends"
+	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
 	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/users"
 	log "github.com/Sirupsen/logrus"
 	"github.com/emersion/go-imap"
@@ -110,12 +111,13 @@ func (f *Fetcher) SyncRemoteWithLocal(order IMAPorder) error {
 	// 3. forward mails to lda as they come on mails chan
 	errs := []error{}
 	syncTimeout := time.Now()
+	batch := Notifications.NewBatch("imap_worker")
 	for mail := range mails {
 		if mail.ImapUid <= box.lastSeenUid {
 			// do not forward seen message, we already have it
 			continue
 		}
-		err := f.Lda.deliverMail(mail, order.UserId, userIdentity.Id.String())
+		err := f.Lda.deliverMail(mail, order.UserId, userIdentity.Id.String(), batch)
 		errs = append(errs, err)
 		if err == nil {
 			box.lastSeenUid = mail.ImapUid
@@ -157,6 +159,7 @@ func (f *Fetcher) SyncRemoteWithLocal(order IMAPorder) error {
 	}
 
 	log.Infof("[Fetcher] all done for %s : %d new mail(s) fetched", order.IdentityId, len(errs))
+	batch.Save(f.Lda.broker.Notifier, "", LongLived)
 	return nil
 }
 

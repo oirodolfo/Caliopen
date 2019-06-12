@@ -11,6 +11,7 @@ import (
 	"fmt"
 	broker "github.com/CaliOpen/Caliopen/src/backend/brokers/go.emails"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
+	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
 	"github.com/satori/go.uuid"
 	"time"
 )
@@ -40,7 +41,7 @@ func (lda *Lda) shutdown() error {
 	return nil
 }
 
-func (lda *Lda) deliverMail(mail *Email, userId, identityID string) (err error) {
+func (lda *Lda) deliverMail(mail *Email, userId, identityID string, batch *Notifications.BatchNotification) (err error) {
 	emailMsg := &EmailMessage{
 		Email: mail,
 		Message: &Message{
@@ -51,6 +52,7 @@ func (lda *Lda) deliverMail(mail *Email, userId, identityID string) (err error) 
 	incoming := &broker.SmtpEmail{
 		EmailMessage: emailMsg,
 		Response:     make(chan *broker.EmailDeliveryAck),
+		Batch:        batch,
 	}
 	defer close(incoming.Response)
 
