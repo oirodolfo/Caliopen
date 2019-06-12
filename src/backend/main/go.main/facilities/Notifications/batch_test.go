@@ -54,4 +54,33 @@ func TestBatchNotification_aggregate(t *testing.T) {
 			}
 		}
 	}
+
+	bn.notificationsThreshold = 2
+	n, err = bn.aggregate("", LongLived)
+	if err != nil {
+		t.Error(err)
+	} else {
+		if !gjson.Valid(n.Body) {
+			t.Error("expected a valid json in body, gjson reported invalid")
+		} else {
+			result := gjson.Get(n.Body, "children_count")
+			if !result.Exists() {
+				t.Error("expected property 'children_count' in notification body but gjson can't find it")
+			} else {
+				if result.Int() != 3 {
+					t.Errorf("expected body.children_count = 3, got %d", result.Int())
+				}
+			}
+			result = gjson.Get(n.Body, "children")
+			if !result.Exists() || !result.IsArray() {
+				t.Error("expected body.children to be an array, gjson reported it doesn't exist or not an array")
+			} else {
+				childrenLength := gjson.Get(n.Body, "children.#")
+				if childrenLength.Num != 0.0 {
+					t.Errorf("expected an empty array in body.children, got %f", childrenLength.Num)
+				}
+			}
+		}
+	}
+
 }
