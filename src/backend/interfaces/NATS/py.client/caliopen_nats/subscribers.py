@@ -50,6 +50,7 @@ class InboundEmail(BaseHandler):
         except DuplicateObject:
             log.info("Message already imported : {}".format(payload))
             nats_success['message_id'] = str(payload['message_id'])
+            nats_success['discussion_id'] = ""  # message has not been parsed
             nats_success['message'] = 'raw message already imported'
             self.natsConn.publish(msg.reply, json.dumps(nats_success))
         except Exception as exc:
@@ -98,6 +99,7 @@ class InboundTwitter(BaseHandler):
         except DuplicateObject:
             log.info("Message already imported : {}".format(payload))
             nats_success['message_id'] = str(payload['message_id'])
+            nats_success['discussion_id'] = ""  # message has not been parsed
             nats_success['message'] = 'raw message already imported'
             self.natsConn.publish(msg.reply, json.dumps(nats_success))
         except Exception as exc:
