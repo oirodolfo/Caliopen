@@ -233,7 +233,7 @@ func (b *EmailBroker) processInbound(rcptsIds [][]UUID, in *SmtpEmail, raw_only 
 						UserId: rcptId[0],
 					},
 					NotifId: UUID(uuid.NewV1()),
-					Body:    `{"emailReceived": "` + (*nats_ack)["message_id"].(string) + `"}`,
+					Body:    `{"emailReceived": "` + (*nats_ack)["message_id"].(string) + `", "discussion_id":"` + (*nats_ack)["discussion_id"].(string) + `"}`,
 				}
 				if in.Batch != nil {
 					in.Batch.Add(notif)

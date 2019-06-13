@@ -73,7 +73,7 @@ func (broker *TwitterBroker) ProcessInDM(userID, remoteID UUID, dm *twitter.Dire
 			UserId: userID,
 		},
 		NotifId: UUID(uuid.NewV1()),
-		Body:    `{"dmReceived": "` + (*nats_ack)["message_id"].(string) + `"}`,
+		Body:    `{"dmReceived": "` + (*nats_ack)["message_id"].(string) + `", "discussion_id":"` + (*nats_ack)["discussion_id"].(string) + `"}`,
 	}
 	if batch != nil {
 		batch.Add(notif)
