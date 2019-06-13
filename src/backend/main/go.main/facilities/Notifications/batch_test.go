@@ -31,23 +31,23 @@ func TestBatchNotification_aggregate(t *testing.T) {
 		if !gjson.Valid(n.Body) {
 			t.Error("expected a valid json in body, gjson reported invalid")
 		} else {
-			result := gjson.Get(n.Body, "children_count")
+			result := gjson.Get(n.Body, "size")
 			if !result.Exists() {
-				t.Error("expected property 'children_count' in notification body but gjson can't find it")
+				t.Error("expected property 'size' in notification body but gjson can't find it")
 			} else {
 				if result.Int() != 3 {
-					t.Errorf("expected body.children_count = 3, got %d", result.Int())
+					t.Errorf("expected body.size = 3, got %d", result.Int())
 				}
 			}
-			result = gjson.Get(n.Body, "children")
+			result = gjson.Get(n.Body, "elements")
 			if !result.Exists() || !result.IsArray() {
-				t.Error("expected body.children to be an array, gjson reported it doesn't exist or not an array")
+				t.Error("expected body.elements to be an array, gjson reported it doesn't exist or not an array")
 			} else {
-				childrenLength := gjson.Get(n.Body, "children.#")
+				childrenLength := gjson.Get(n.Body, "elements.#")
 				if childrenLength.Num != 3.0 {
-					t.Errorf("expected an array with 3 obj in body.children, got %f", childrenLength.Num)
+					t.Errorf("expected an array with 3 obj in body.elements, got %f", childrenLength.Num)
 				}
-				lastChildStatus := gjson.Get(n.Body, "children.2.body.status")
+				lastChildStatus := gjson.Get(n.Body, "elements.2.body.status")
 				if lastChildStatus.Str != "ignored" {
 					t.Errorf("expected last children.2.body.status == 'ignored', got %s", lastChildStatus.Raw)
 				}
@@ -63,21 +63,21 @@ func TestBatchNotification_aggregate(t *testing.T) {
 		if !gjson.Valid(n.Body) {
 			t.Error("expected a valid json in body, gjson reported invalid")
 		} else {
-			result := gjson.Get(n.Body, "children_count")
+			result := gjson.Get(n.Body, "size")
 			if !result.Exists() {
-				t.Error("expected property 'children_count' in notification body but gjson can't find it")
+				t.Error("expected property 'size' in notification body but gjson can't find it")
 			} else {
 				if result.Int() != 3 {
-					t.Errorf("expected body.children_count = 3, got %d", result.Int())
+					t.Errorf("expected body.size = 3, got %d", result.Int())
 				}
 			}
-			result = gjson.Get(n.Body, "children")
+			result = gjson.Get(n.Body, "elements")
 			if !result.Exists() || !result.IsArray() {
-				t.Error("expected body.children to be an array, gjson reported it doesn't exist or not an array")
+				t.Error("expected body.elements to be an array, gjson reported it doesn't exist or not an array")
 			} else {
-				childrenLength := gjson.Get(n.Body, "children.#")
+				childrenLength := gjson.Get(n.Body, "elements.#")
 				if childrenLength.Num != 0.0 {
-					t.Errorf("expected an empty array in body.children, got %f", childrenLength.Num)
+					t.Errorf("expected an empty array in body.elements, got %f", childrenLength.Num)
 				}
 			}
 		}

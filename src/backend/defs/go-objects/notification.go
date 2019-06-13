@@ -113,7 +113,7 @@ func (n *Notification) UnmarshalCQLMap(input map[string]interface{}) {
 	// body should be a json document
 	// it may embed children notifications that need to be extracted to the children property
 	if gjson.Valid(n.Body) {
-		if children := gjson.Get(n.Body, "children"); children.IsArray() {
+		if children := gjson.Get(n.Body, "elements"); children.IsArray() {
 			n.Children = []Notification{}
 			children.ForEach(func(key, value gjson.Result) bool {
 				if value.IsObject() {
@@ -132,7 +132,7 @@ func (n *Notification) UnmarshalCQLMap(input map[string]interface{}) {
 				return true
 			})
 		}
-		n.ChildrenCount = int(gjson.Get(n.Body, "children_count").Int())
+		n.ChildrenCount = int(gjson.Get(n.Body, "size").Int())
 	}
 
 	if emitter, ok := input["emitter"].(string); ok {

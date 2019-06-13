@@ -11,12 +11,12 @@ func TestNotification_UnmarshalCQLMap(t *testing.T) {
 	input := map[string]interface{}{
 		"user_id":  gocql.UUID(uuid.FromStringOrNil("63ab7904-c416-4f1a-9652-3de82e4fd1f1")),
 		"notif_id": gocql.UUID(uuid.FromStringOrNil("63ab7904-c416-1f1a-9652-3de82e4fd1f1")),
-		"body": `{"children": [
+		"body": []byte(`{"elements": [
 		{"body": {"contact_id": "63ab7904-c416-4f1a-9652-3de82e4fd1f1", "status": "imported"}},
 		{"body": {"contact_id": "63ab7904-c416-4f1a-9652-3de82e4fd1f1", "status": "error", "error_msg": "something went wrong"}},
 		{"body": {"contact_id": "63ab7904-c416-4f1a-9652-3de82e4fd1f1", "status": "ignored"}}
 		],
-		"children_count": 33}`,
+		"size": 33}`),
 		"emitter": "contacts",
 		"type":    "import_result",
 	}
