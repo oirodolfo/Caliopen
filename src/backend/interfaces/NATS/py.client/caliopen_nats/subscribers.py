@@ -45,6 +45,7 @@ class InboundEmail(BaseHandler):
             deliver = UserMailDelivery(user, identity)
             new_message = deliver.process_raw(payload['message_id'])
             nats_success['message_id'] = str(new_message.message_id)
+            nats_success['discussion_id'] = str(new_message.discussion_id)
             self.natsConn.publish(msg.reply, json.dumps(nats_success))
         except DuplicateObject:
             log.info("Message already imported : {}".format(payload))
@@ -92,6 +93,7 @@ class InboundTwitter(BaseHandler):
             deliver = UserTwitterDMDelivery(user, identity)
             new_message = deliver.process_raw(payload['message_id'])
             nats_success['message_id'] = str(new_message.message_id)
+            nats_success['discussion_id'] = str(new_message.discussion_id)
             self.natsConn.publish(msg.reply, json.dumps(nats_success))
         except DuplicateObject:
             log.info("Message already imported : {}".format(payload))
