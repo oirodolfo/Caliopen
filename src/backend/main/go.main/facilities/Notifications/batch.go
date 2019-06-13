@@ -75,8 +75,6 @@ func (bn *BatchNotification) aggregate(reference, ttl string) (Notification, err
 			}
 			children = append(children, NotificationModel{
 				Body:      n.Body,
-				Emitter:   n.Emitter,
-				NotifId:   n.NotifId.String(),
 				Reference: n.Reference,
 				Type:      n.Type,
 				UserId:    n.User.UserId.String(),
