@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Upload PGP keys using files rather than textboxes.
+- Notifications : output bach operations (external identities fetches for ex.) into one notification
 
 ### Fixed
 
