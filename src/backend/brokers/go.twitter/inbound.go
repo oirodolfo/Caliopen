@@ -67,13 +67,13 @@ func (broker *TwitterBroker) ProcessInDM(userID, remoteID UUID, dm *twitter.Dire
 	// nats delivery OK, notify user
 	notif := Notification{
 		Emitter: "twitterBroker",
-		Type:    EventNotif,
+		Type:    NewMessageNotif,
 		TTLcode: LongLived,
 		User: &User{
 			UserId: userID,
 		},
 		NotifId: UUID(uuid.NewV1()),
-		Body:    `{"dmReceived": "` + (*nats_ack)["message_id"].(string) + `", "discussion_id":"` + (*nats_ack)["discussion_id"].(string) + `"}`,
+		Body:    `{"message_id": "` + (*nats_ack)["message_id"].(string) + `", "discussion_id":"` + (*nats_ack)["discussion_id"].(string) + `"}`,
 	}
 	if batch != nil {
 		batch.Add(notif)

@@ -47,14 +47,15 @@ type NotificationTTL struct {
 
 const (
 	// types list for Notification.Type property
-	EventNotif    = "event"
-	InfoNotif     = "info"
-	FeedbackNotif = "feedback"
-	WarningNotif  = "warning"
-	TeaserNotif   = "teaser"
-	ErrorNotif    = "error"
-	AlertNotif    = "alert"
-	BatchNotif    = "batch"
+	EventNotif      = "event"
+	NewMessageNotif = "new_message"
+	InfoNotif       = "info"
+	FeedbackNotif   = "feedback"
+	WarningNotif    = "warning"
+	TeaserNotif     = "teaser"
+	ErrorNotif      = "error"
+	AlertNotif      = "alert"
+	BatchNotif      = "batch"
 
 	// TTL codes stored in notification_ttl table
 	ShortLived = "short-lived"

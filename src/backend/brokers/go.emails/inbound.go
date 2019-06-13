@@ -125,6 +125,7 @@ func (b *EmailBroker) processInboundSMTP(in *SmtpEmail, raw_only bool) {
 	}
 
 	b.processInbound(rcptsIds, in, true, resp)
+	in.Batch.Save(b.Notifier, "", LongLived)
 }
 
 func (b *EmailBroker) processInboundIMAP(in *SmtpEmail) {
@@ -227,13 +228,13 @@ func (b *EmailBroker) processInbound(rcptsIds [][]UUID, in *SmtpEmail, raw_only 
 
 				notif := Notification{
 					Emitter: "smtp",
-					Type:    EventNotif,
+					Type:    NewMessageNotif,
 					TTLcode: LongLived,
 					User: &User{
 						UserId: rcptId[0],
 					},
 					NotifId: UUID(uuid.NewV1()),
-					Body:    `{"emailReceived": "` + (*nats_ack)["message_id"].(string) + `", "discussion_id":"` + (*nats_ack)["discussion_id"].(string) + `"}`,
+					Body:    `{"message_id": "` + (*nats_ack)["message_id"].(string) + `", "discussion_id":"` + (*nats_ack)["discussion_id"].(string) + `"}`,
 				}
 				if in.Batch != nil {
 					in.Batch.Add(notif)
