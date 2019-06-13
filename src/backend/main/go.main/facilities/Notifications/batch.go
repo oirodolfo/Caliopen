@@ -78,15 +78,20 @@ func (bn *BatchNotification) aggregate(reference, ttl string) (Notification, err
 			})
 		}
 	}
-	jChildren, err := json.Marshal(children)
-	if err != nil {
-		return Notification{}, err
-	}
+
 	body := strings.Builder{}
 	body.WriteString(`{"size":`)
-	body.WriteString(strconv.Itoa(bn.notificationsCount) + ",")
-	body.WriteString(`"elements":`)
-	body.WriteString(string(jChildren))
+	body.WriteString(strconv.Itoa(bn.notificationsCount))
+
+	if len(children) > 0 {
+		jChildren, err := json.Marshal(children)
+		if err != nil {
+			return Notification{}, err
+		}
+		body.WriteString(`,"elements":`)
+		body.WriteString(string(jChildren))
+	}
+
 	body.WriteString(`}`)
 	notif.Body = body.String()
 	return notif, nil

@@ -72,13 +72,8 @@ func TestBatchNotification_aggregate(t *testing.T) {
 				}
 			}
 			result = gjson.Get(n.Body, "elements")
-			if !result.Exists() || !result.IsArray() {
-				t.Error("expected body.elements to be an array, gjson reported it doesn't exist or not an array")
-			} else {
-				childrenLength := gjson.Get(n.Body, "elements.#")
-				if childrenLength.Num != 0.0 {
-					t.Errorf("expected an empty array in body.elements, got %f", childrenLength.Num)
-				}
+			if result.Exists() {
+				t.Error("expected body.elements doesn't exist, but gjson found it")
 			}
 		}
 	}
