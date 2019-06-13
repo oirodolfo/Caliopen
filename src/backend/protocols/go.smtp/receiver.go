@@ -8,6 +8,7 @@ import (
 	"bytes"
 	broker "github.com/CaliOpen/Caliopen/src/backend/brokers/go.emails"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
+	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
 	"time"
 )
 
@@ -24,9 +25,11 @@ func (lda *Lda) handler(peer Peer, ev SmtpEnvelope) error {
 		},
 		Message: &Message{},
 	}
+	batch := Notifications.NewBatch("smtp")
 	incoming := &broker.SmtpEmail{
 		EmailMessage: &emailMessage,
 		Response:     make(chan *broker.EmailDeliveryAck),
+		Batch:        batch,
 	}
 	defer close(incoming.Response)
 

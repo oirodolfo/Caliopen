@@ -56,14 +56,14 @@ func (bn *BatchNotification) Save(notifier Notifiers, reference, ttl string) {
 // otherwise, only children_count is written
 func (bn *BatchNotification) aggregate(reference, ttl string) (Notification, error) {
 	if len(bn.notifications) == 0 {
-		return Notification{}, errors.New("[BatchNotifier] children is empty")
+		return Notification{}, errors.New("[BatchNotifier] elements is empty")
 	}
 	notif := Notification{
 		Emitter:       bn.emitter,
 		NotifId:       UUID(uuid.NewV1()),
 		Reference:     reference,
 		TTLcode:       ttl,
-		Type:          BatchNotif,
+		Type:          bn.notifications[0].Type,
 		User:          bn.notifications[0].User,
 		ChildrenCount: bn.notificationsCount,
 	}
@@ -74,10 +74,7 @@ func (bn *BatchNotification) aggregate(reference, ttl string) (Notification, err
 				return Notification{}, errors.New("[BatchNotifier] can't aggregate notifications : inconsistent user ids within notifications slice")
 			}
 			children = append(children, NotificationModel{
-				Body:      n.Body,
-				Reference: n.Reference,
-				Type:      n.Type,
-				UserId:    n.User.UserId.String(),
+				Body: n.Body,
 			})
 		}
 	}
@@ -86,9 +83,9 @@ func (bn *BatchNotification) aggregate(reference, ttl string) (Notification, err
 		return Notification{}, err
 	}
 	body := strings.Builder{}
-	body.WriteString(`{"children_count":`)
+	body.WriteString(`{"size":`)
 	body.WriteString(strconv.Itoa(bn.notificationsCount) + ",")
-	body.WriteString(`"children":`)
+	body.WriteString(`"elements":`)
 	body.WriteString(string(jChildren))
 	body.WriteString(`}`)
 	notif.Body = body.String()
