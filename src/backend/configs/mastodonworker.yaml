@@ -1,0 +1,44 @@
+workers: 10
+mastodon_app_id:
+mastodon_app_secret:
+BrokerConfig:
+  #messaging system
+  nats_url: nats://nats:4222
+  nats_queue: Mastodonworkers                              # NATS group queue for workers
+  nats_topic_poller: mastodonJobs                          # NATS topic on which to request job from idpoller
+  nats_topic_poller_cache: idCache                         # NATS topic to send orders to idpoller regarding identities management
+  nats_topic_direct_message: mastodon_dm                   # NATS topic to listen to orders for handling DMs (fetch, send)
+  #storage facility
+  store_name: cassandra                                    # backend to store raw emails and messages (inbound & outbound)
+  store_settings:
+    hosts: # many allowed
+      - cassandra
+    keyspace: caliopen
+    consistency_level: 1
+    raw_size_limit: 1048576                                # max size in bytes for objects in db. Use S3 interface if larger.
+    object_store: s3
+    object_store_settings:
+      endpoint: objectstore:9090
+      access_key: CALIOPEN_ACCESS_KEY_                     # Access key of 5 to 20 characters in length
+      secret_key: CALIOPEN_SECRET_KEY_BE_GOOD_AND_LIVE_OLD # Secret key of 8 to 40 characters in length
+      location: eu-fr-localhost                            # S3 region.
+      buckets:
+        raw_messages: caliopen-raw-messages                # bucket name to put raw messages to
+        temporary_attachments: caliopen-tmp-attachments    # bucket name to store draft attachments
+    use_vault: false
+    vault_settings:
+      url: http://vault:8200
+      username: mastodonworker                             # password authentication for now ; later we'll make use of more secure auth methods (TLScert, kubernetes…)
+      password: a_weak_password_for_mastodon
+  LDAConfig:
+    broker_type: mastodon                                  # types are : smtp, imap, mailboxe, etc.
+    #index facility
+    index_name: elasticsearch                              # backend to index messages (inbound & outbound)
+    index_settings:
+      urls: # many allowed
+        - http://elasticsearch:9200
+    #messaging system
+    in_topic: inboundMastodon
+    # notifications
+    NotifierConfig:
+      admin_username: admin                                # username on whose behalf notifiers will act. This admin user must have been created before by other means.
