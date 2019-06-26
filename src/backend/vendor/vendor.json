@@ -355,6 +355,12 @@
 			"revisionTime": "2018-10-10T17:46:47Z"
 		},
 		{
+			"checksumSHA1": "3ORLCzeT6ci2RkN0jo1bY6bmE8A=",
+			"path": "github.com/gorilla/websocket",
+			"revision": "80c2d40e9b91f2ef7a9c1a403aeec64d1b89a9a6",
+			"revisionTime": "2019-04-27T04:03:06Z"
+		},
+		{
 			"checksumSHA1": "O0r0hj4YL+jSRNjnshkeH4GY+4s=",
 			"path": "github.com/hailocab/go-hostpool",
 			"revision": "e80d13ce29ede4452c43dea11e79b9bc8a15b478",
@@ -623,6 +629,12 @@
 			"path": "github.com/mattn/go-isatty",
 			"revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe",
 			"revisionTime": "2017-03-22T23:44:13Z"
+		},
+		{
+			"checksumSHA1": "SorUp0umrUD+RysCWDWsAhacI8s=",
+			"path": "github.com/mattn/go-mastodon",
+			"revision": "26fcedc8aa4e6a848c040df59ed2e24237ef0121",
+			"revisionTime": "2019-06-21T17:12:04Z"
 		},
 		{
 			"checksumSHA1": "+C5xtTR8XG1rwSVunPPRANfYolY=",
@@ -935,6 +947,12 @@
 			"path": "github.com/tidwall/match",
 			"revision": "173748da739a410c5b0b813b956f89ff94730b4c",
 			"revisionTime": "2016-08-30T17:39:30Z"
+		},
+		{
+			"checksumSHA1": "hV1GxcBW8P9iy8DEYJnEbbK/azw=",
+			"path": "github.com/tomnomnom/linkheader",
+			"revision": "02ca5825eb8097f10d9cc53da78481a85ad84e04",
+			"revisionTime": "2018-09-05T14:40:13Z"
 		},
 		{
 			"checksumSHA1": "syVZskC5CRNdIaisxqimbeA915I=",
