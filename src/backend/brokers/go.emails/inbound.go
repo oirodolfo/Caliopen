@@ -47,12 +47,7 @@ func (b *EmailBroker) incomingSmtpWorker() {
 				Err:          true,
 				Response:     "empty payload",
 			}
-			select {
-			case in.Response <- ack:
-				//write was OK
-			default:
-				//unable to write, don't block
-			}
+			in.Response <- ack
 		}
 		go b.processInboundSMTP(in, true)
 	}
@@ -76,12 +71,7 @@ func (b *EmailBroker) imapWorker() {
 				Err:          true,
 				Response:     "empty payload",
 			}
-			select {
-			case in.Response <- ack:
-				//write was OK
-			default:
-				//unable to write, don't block
-			}
+			in.Response <- ack
 		}
 		go b.processInboundIMAP(in)
 	}
@@ -153,9 +143,14 @@ func (b *EmailBroker) processInboundIMAP(in *SmtpEmail) {
 // stores raw email + json + message and sends an order on NATS topic for next composant to process it
 // if raw_only is true, only stores the raw email with its json representation but do not unmarshal to our message model
 func (b *EmailBroker) processInbound(rcptsIds [][]UUID, in *SmtpEmail, raw_only bool, resp *EmailDeliveryAck) {
+	timer := time.Now()
 	// do not forget to send back ack
 	defer func(r *EmailDeliveryAck) {
-		in.Response <- r
+		if time.Now().Sub(timer) < time.Second*29 { // lda will not wait for more than 30 sec. : it'll close the chan if timeout reached
+			in.Response <- r
+		} else {
+			log.Errorf("[EmailBroker] processInbound last more than 29 sec., can't send back this EmailDeliveryAck : %v", *resp)
+		}
 	}(resp)
 
 	if len(rcptsIds) == 0 {
