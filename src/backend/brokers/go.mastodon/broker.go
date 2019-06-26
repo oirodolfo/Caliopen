@@ -8,8 +8,8 @@ import (
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
 	"github.com/CaliOpen/Caliopen/src/backend/main/go.backends"
 	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
-	"github.com/CaliOpen/go-twitter/twitter"
 	log "github.com/Sirupsen/logrus"
+	"github.com/mattn/go-mastodon"
 	"github.com/nats-io/go-nats"
 )
 
@@ -43,16 +43,16 @@ type (
 	}
 
 	DMpayload struct {
-		DM       *mastodon.DirectMessageEvent
+		DM       *mastodon.Status
 		Err      error
 		Response chan MastodonDeliveryAck
 	}
 
 	// MastodonAck embeds response from Mastodon API to pass back to broker.
 	MastodonDeliveryAck struct {
-		Payload  *mastodon.DirectMessageEventsCreateResponse `json:"-"`
-		Err      bool                                        `json:"error"`
-		Response string                                      `json:"message,omitempty"`
+		Payload  *mastodon.Status `json:"-"`
+		Err      bool             `json:"error"`
+		Response string           `json:"message,omitempty"`
 	}
 
 	// natsCom is used to communicate between nats handler and broker

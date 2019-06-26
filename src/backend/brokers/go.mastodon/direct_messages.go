@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
-	"github.com/CaliOpen/go-mastodon"
 	log "github.com/Sirupsen/logrus"
+	"github.com/mattn/go-mastodon"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 	"time"
@@ -20,7 +20,7 @@ const (
 )
 
 // SaveRawDM marshal DM to json and save it as a raw message object in store
-func (broker *MastodonBroker) SaveRawDM(dm *mastodon.DirectMessageEvent, userId UUID) (rawMessageId UUID, err error) {
+func (broker *MastodonBroker) SaveRawDM(dm *mastodon.Status, userId UUID) (rawMessageId UUID, err error) {
 
 	jsonDM, e := json.Marshal(dm)
 	if e != nil {
@@ -45,8 +45,8 @@ func (broker *MastodonBroker) SaveRawDM(dm *mastodon.DirectMessageEvent, userId 
 }
 
 func (b *MastodonBroker) SaveIndexSentDM(initialOrder BrokerOrder, ack *MastodonDeliveryAck) error {
-	// save raw email in db
-	rawMsgId, err := b.SaveRawDM(&ack.Payload.Event, UUID(uuid.FromStringOrNil(initialOrder.UserId)))
+	// save raw status in db
+	rawMsgId, err := b.SaveRawDM(ack.Payload, UUID(uuid.FromStringOrNil(initialOrder.UserId)))
 	if err != nil {
 		return err
 	}
@@ -67,12 +67,7 @@ func (b *MastodonBroker) SaveIndexSentDM(initialOrder BrokerOrder, ack *Mastodon
 	}
 	fields := make(map[string]interface{})
 	var date time.Time
-	date, err = ack.Payload.Event.CreatedAtTime()
-	if err != nil {
-		log.WithError(err).Warn("[SaveIndexSentDM] failed to parse date, using time.Now()")
-		date = time.Now()
-		err = nil
-	}
+	date = ack.Payload.CreatedAt
 	message.Raw_msg_id = rawMsgId
 	fields["Raw_msg_id"] = message.Raw_msg_id
 	message.Is_draft = false
@@ -83,7 +78,7 @@ func (b *MastodonBroker) SaveIndexSentDM(initialOrder BrokerOrder, ack *Mastodon
 	fields["Date_sort"] = message.Date_sort
 	//fields["Attachments"] = TODO
 	message.External_references = ExternalReferences{
-		Message_id: ack.Payload.Event.ID,
+		Message_id: string(ack.Payload.ID),
 	}
 	fields["External_references"] = message.External_references
 
@@ -102,23 +97,13 @@ func (b *MastodonBroker) SaveIndexSentDM(initialOrder BrokerOrder, ack *Mastodon
 }
 
 // UnmarshalDM creates a new Caliopen Message entity from a mastodon status
-func UnmarshalDM(dm *mastodon.DirectMessageEvent, userId UUID) (message *Message, err error) {
+func UnmarshalDM(dm *mastodon.Status, userId UUID) (message *Message, err error) {
 	return nil, errors.New("not implemented")
 }
 
 // MarshalDM builds a Mastodon status with visibility=direct from a Caliopen message
-func MarshalDM(msg *Message) (dm *mastodon.DirectMessageEvent, err error) {
+func MarshalDM(msg *Message) (dm *mastodon.Status, err error) {
 
-	dm = &mastodon.DirectMessageEvent{
-		Type: DirectMessageType,
-		Message: &mastodon.DirectMessageEventMessage{
-			Target: mastodon.DMEventMessageTarget{
-				RecipientScreenName: msg.Participants[0].Address, //TODO : handle multiple participants
-			},
-			Data: mastodon.DMEventMessageData{
-				Text: msg.Body_plain, // TODO : check body length to conform to Mastodon API
-			},
-		},
-	}
+	dm = &mastodon.Status{}
 	return
 }

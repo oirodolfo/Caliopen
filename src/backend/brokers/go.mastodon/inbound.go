@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
-	"github.com/CaliOpen/go-mastodon/mastodon"
 	log "github.com/Sirupsen/logrus"
+	"github.com/mattn/go-mastodon"
 	"github.com/satori/go.uuid"
 	"time"
 )
@@ -28,7 +28,7 @@ const (
 //      sending natsOrderRaw for other stack components
 //      sending new message notification if everything went good
 //      updating remote identity state in db
-func (broker *MastodonBroker) ProcessInDM(userID, remoteID UUID, dm *mastodon.DirectMessageEvent, rawOnly bool) error {
+func (broker *MastodonBroker) ProcessInDM(userID, remoteID UUID, dm *mastodon.Status, rawOnly bool) error {
 
 	rawID, err := broker.SaveRawDM(dm, userID)
 	if err != nil {

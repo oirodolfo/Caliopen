@@ -39,10 +39,6 @@ func (b *MastodonBroker) ProcessOutDM(order BrokerOrder, worker chan *DMpayload)
 		replyError(err, worker)
 		return
 	}
-	if dmPayload.DM.Message.Target.RecipientScreenName == "" {
-		replyError(errors.New("missing recipient"), worker)
-		return
-	}
 
 	// 2. give it back to mastodon worker and wait for response
 	select {

@@ -9,16 +9,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	broker "github.com/CaliOpen/Caliopen/src/backend/brokers/go.mastodon"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
-	"github.com/CaliOpen/go-mastodon"
 	log "github.com/Sirupsen/logrus"
-	"github.com/dghubble/oauth1"
+	"github.com/mattn/go-mastodon"
 )
 
 type (
@@ -35,9 +32,9 @@ type (
 	MastodonAccount struct {
 		acct        string
 		displayName string
-		login       string
+		token       string
 		mastodonID  string
-		password    string
+		secret      string
 		remoteID    UUID
 		url         string
 		username    string
@@ -88,11 +85,11 @@ func NewAccountHandler(userID, remoteID string, worker Worker) (accountHandler *
 		return
 	}
 	accountHandler.userAccount = &MastodonAccount{
-		login:           (*remote.Credentials)["token"],
-		password:        (*remote.Credentials)["secret"],
-		userID:          remote.UserId,
-		remoteID:        remote.Id,
-		accountUsername: remote.Identifier,
+		token:    (*remote.Credentials)["token"],
+		secret:   (*remote.Credentials)["secret"],
+		userID:   remote.UserId,
+		remoteID: remote.Id,
+		acct:     remote.Identifier,
 	}
 
 	if lastseen, ok := remote.Infos[lastSeenInfosKey]; ok {
@@ -101,36 +98,17 @@ func NewAccountHandler(userID, remoteID string, worker Worker) (accountHandler *
 		accountHandler.lastDMseen = "0"
 	}
 
-	authConf := oauth1.NewConfig(worker.Conf.MastodonAppKey, worker.Conf.MastodonAppSecret)
-	token := oauth1.NewToken(accountHandler.userAccount.accessToken, accountHandler.userAccount.accessTokenSecret)
-	httpClient := authConf.Client(oauth1.NoContext, token)
-	if accountHandler.mastodonClient = mastodon.NewClient(httpClient); accountHandler.mastodonClient == nil {
+	//authConf := oauth1.NewConfig(worker.Conf.MastodonAppKey, worker.Conf.MastodonAppSecret)
+	//token := oauth1.NewToken(accountHandler.userAccount.token, accountHandler.userAccount.secret)
+	//httpClient := authConf.Client(oauth1.NoContext, token)
+	config := mastodon.Config{}
+	if accountHandler.mastodonClient = mastodon.NewClient(&config); accountHandler.mastodonClient == nil {
 		return nil, errors.New("[NewWorker] mastodon api failed to create http client")
 	}
-	var mastodonID int64
-	var screenName string
-	accountHandler.usersScreenNames = map[int64]string{}
+	//var mastodonID int64
+	//var screenName string
 
 	// try to cache account's ID and screenName
-	if mastodonid, ok := remote.Infos["mastodonid"]; ok && mastodonid != "" {
-		accountHandler.userAccount.mastodonID = mastodonid
-		mastodonID, _ = strconv.ParseInt(mastodonid, 10, 64)
-		if mastodonname, ok := remote.Infos["screen_name"]; ok && mastodonname != "" {
-			screenName = mastodonname
-		} else {
-			screenName = accountHandler.getAccountName(mastodonid)
-		}
-	} else {
-		mastodonUser, _, e := accountHandler.mastodonClient.Users.Show(&mastodon.UserShowParams{ScreenName: accountHandler.userAccount.screenName})
-		if e == nil {
-			accountHandler.userAccount.mastodonID = mastodonUser.IDStr
-			mastodonID = mastodonUser.ID
-			screenName = mastodonUser.ScreenName
-		}
-	}
-	if mastodonID != 0 && screenName != "" {
-		accountHandler.usersScreenNames[mastodonID] = screenName
-	}
 	return
 }
 
@@ -237,119 +215,11 @@ func (worker *AccountHandler) PollDM() {
 	}()
 
 	// retrieve DM list from mastodon API
-	DMs, _, err := worker.mastodonClient.DirectMessages.EventsList(&mastodon.DirectMessageEventsListParams{Count: 50})
-	if err != nil {
-		if e, ok := err.(mastodon.APIError); ok {
-			errorsMessages := new(strings.Builder)
-			for _, err := range e.Errors {
-				switch err.Code {
-				case 88: // rate limit error => send throttling order to idpoller
-					var interval int
-					log.Infof("[AccountHandler %s] PollDM : mastodon returned rate limit error, slowing down worker for account", worker.userAccount.remoteID)
-					if pollInterval, ok := accountInfos["pollinterval"]; ok {
-						interval, e := strconv.Atoi(pollInterval)
-						if e == nil {
-							interval *= 2
-							// prevent boundaries overflow : min = 1 min, max = 3 days
-							if interval < 1 || interval > 3*24*60 {
-								interval = defaultPollInterval
-							}
-						} else {
-							interval = defaultPollInterval
-						}
-					} else {
-						interval = defaultPollInterval
-					}
-					newInterval := strconv.Itoa(interval)
-					accountInfos["pollinterval"] = newInterval
-					e := worker.broker.Store.UpdateRemoteInfosMap(worker.userAccount.userID.String(), worker.userAccount.remoteID.String(), accountInfos)
-					if e != nil {
-						log.WithError(e).Warnf("[AccountHandler %s] PollDM : failed to updateRemoteInfosMap with new poll interval", worker.userAccount.userID.String()+"/"+worker.userAccount.remoteID.String())
-					}
-					order := RemoteIDNatsMessage{
-						IdentityId: worker.userAccount.remoteID.String(),
-						Order:      "update_interval",
-						OrderParam: newInterval,
-						Protocol:   "mastodon",
-						UserId:     worker.userAccount.userID.String(),
-					}
-					jorder, jerr := json.Marshal(order)
-					if jerr == nil {
-						e := worker.broker.NatsConn.Publish(worker.broker.Config.NatsTopicPollerCache, jorder)
-						if e != nil {
-							log.WithError(e).Warnf("[AccountHandler %s] PollDM : failed to publish new poll interval to idpoller", worker.userAccount.userID.String()+"/"+worker.userAccount.remoteID.String())
-						}
-					}
-				case 89: // invalid token or token expired. Suicide this accountworker thus it will be re-created with new oauth next time idpoller will order it
-					delete(accountInfos, syncingKey)
-					e := worker.saveErrorState(accountInfos, errorsMessages.String())
-					if e != nil {
-						log.WithError(e).Warnf("[AccountHandler %s] PollDM failed to update sync state in db", worker.userAccount.remoteID.String())
-					}
-					worker.MasterDesk <- DeskMessage{closeAccountOrder, worker}
-					return
-				}
-				errorsMessages.WriteString(err.Message + " ")
-			}
-			e := worker.saveErrorState(accountInfos, errorsMessages.String())
-			if e != nil {
-				log.WithError(e).Warnf("[AccountHandler %s] PollDM failed to update sync state in db", worker.userAccount.remoteID.String())
-			}
-			return
-
-		} else {
-			e := worker.saveErrorState(accountInfos, err.Error())
-			if e != nil {
-				log.WithError(e).Warnf("[AccountHandler %s] PollDM failed to update sync state in db", worker.userAccount.remoteID.String())
-			}
-			return
-		}
-	}
-
-	sort.Sort(ByAscID(DMs.Events)) // reverse events order to get older DMs first
-
-	if len(DMs.Events) > 0 && worker.dmNotSeen(DMs.Events[0]) {
-		//TODO: handle pagination with `cursor` param
-	}
-
-	log.Infof("[AccountHandler %s] PollDM %d events retrieved", worker.userAccount.remoteID.String(), len(DMs.Events))
-	for _, event := range DMs.Events {
-		if worker.dmNotSeen(event) {
-			//lookup sender & recipient's screen_names because there are not embedded in event object
-			accountName := worker.getAccountName(event.Message.SenderID)
-			if accountName == "" {
-				continue // we don't want to inject a message with an incomplete participant
-			}
-			(*event.Message).SenderScreenName = accountName
-			accountName = worker.getAccountName(event.Message.Target.RecipientID)
-			if accountName == "" {
-				continue // we don't want to inject a message with an incomplete participant
-			}
-			(*event.Message).Target.RecipientScreenName = accountName
-
-			err = worker.broker.ProcessInDM(worker.userAccount.userID, worker.userAccount.remoteID, &event, true)
-			if err != nil {
-				// something went wrong, forget this DM
-				log.WithError(err).Warnf("[AccountHandler %s] ProcessInDM failed for event : %+v", worker.userAccount.remoteID.String(), event)
-				continue
-			}
-			worker.lastDMseen = event.ID
-			// update sync status in db
-			// TODO: algorithm to shorten pollinterval after new DM has been received
-			accountInfos[lastSeenInfosKey] = event.ID
-			accountInfos[lastSyncInfosKey] = time.Now().Format(time.RFC3339)
-			err = worker.broker.Store.UpdateRemoteInfosMap(worker.userAccount.userID.String(), worker.userAccount.remoteID.String(), accountInfos)
-			if err != nil {
-				log.WithError(err).Warnf("[AccountHandler %s] ProcessInDM failed to update InfosMap for event : %+v", worker.userAccount.remoteID.String(), event)
-				continue
-			}
-		}
-	}
 
 }
 
-func (worker *AccountHandler) dmNotSeen(event mastodon.DirectMessageEvent) bool {
-	return worker.lastDMseen < event.ID
+func (worker *AccountHandler) dmNotSeen(status mastodon.Status) bool {
+	return worker.lastDMseen < string(status.ID)
 }
 
 // SendDM delivers DM to Mastodon endpoint and give back Mastodon's response to broker.
@@ -370,32 +240,12 @@ func (worker *AccountHandler) SendDM(order BrokerOrder) error {
 	}
 
 	// retrieve recipient's mastodon ID from DM's screenName
-	user, _, userErr := worker.mastodonClient.Users.Show(&mastodon.UserShowParams{
-		ScreenName: brokerMessage.DM.Message.Target.RecipientScreenName,
-	})
-	if userErr != nil {
-		brokerMessage.Response <- broker.MastodonDeliveryAck{
-			Err:      true,
-			Response: userErr.Error(),
-		}
-		return userErr
-	}
-	brokerMessage.DM.Message.Target.RecipientID = user.IDStr
 
 	// deliver DM through Mastodon API
-	createResponse, _, errResponse := worker.mastodonClient.DirectMessages.EventsCreate(brokerMessage.DM.Message)
-	if errResponse != nil {
-		brokerMessage.Response <- broker.MastodonDeliveryAck{
-			Payload:  createResponse,
-			Err:      true,
-			Response: errResponse.Error(),
-		}
-		return errResponse
-	}
 
 	// give back Mastodon's reply to broker for it finishes its job
 	brokerMessage.Response <- broker.MastodonDeliveryAck{
-		Payload: createResponse,
+		//Payload: createResponse,
 	}
 
 	select {
@@ -413,21 +263,8 @@ func (worker *AccountHandler) SendDM(order BrokerOrder) error {
 // screen name is retrieve either from worker's cache or Mastodon API
 // returns empty string if it fails.
 func (worker *AccountHandler) getAccountName(accountID string) (accountName string) {
-	ID, err := strconv.ParseInt(accountID, 10, 64)
-	if err == nil {
-		var inCache bool
-		if accountName, inCache = worker.usersScreenNames[ID]; !inCache {
-			user, resp, err := worker.mastodonClient.Users.Show(&mastodon.UserShowParams{UserID: ID})
-			if err == nil && user != nil {
-				(*worker).usersScreenNames[ID] = user.ScreenName
-				return user.ScreenName
-			} else {
-				log.WithError(err).Warnf("[AccountHandler] failed to getAccountName for mastodon ID %s. Got user {%+v} and http response {%+v}", accountID, user, resp)
-			}
-		}
-		return accountName
-	}
-	return
+	// useless ?
+	return ""
 }
 
 // isDMUnique returns true if Mastodon Direct Message id is not found within user's messages index
@@ -508,7 +345,7 @@ func (worker *AccountHandler) saveErrorState(infos map[string]string, err string
 }
 
 // ByAscID implements sort interface
-type ByAscID []mastodon.DirectMessageEvent
+type ByAscID []mastodon.Status
 
 func (bri ByAscID) Len() int {
 	return len(bri)
