@@ -4,7 +4,7 @@ import classnames from 'classnames';
 import { withI18n } from '@lingui/react';
 import providerSrc from './assets/providers.svg';
 import { capitalize } from '../../../../services/capitalize';
-import { PROVIDER_GMAIL, PROVIDER_TWITTER } from '../../model/Identity';
+import { PROVIDER_GMAIL, PROVIDER_MASTODON, PROVIDER_TWITTER } from '../../model/Identity';
 import './style.scss';
 
 const PROVIDER_SIZE_NORMAL = 'normal';
@@ -15,7 +15,7 @@ class ProviderIcon extends PureComponent {
     children: PropTypes.node,
     i18n: PropTypes.shape({}).isRequired,
     className: PropTypes.string,
-    providerName: PropTypes.oneOf([PROVIDER_GMAIL, PROVIDER_TWITTER]).isRequired,
+    providerName: PropTypes.oneOf([PROVIDER_GMAIL, PROVIDER_TWITTER, PROVIDER_MASTODON]).isRequired,
     // XXX: refactor me
     size: PropTypes.oneOf([PROVIDER_SIZE_NORMAL]),
   };

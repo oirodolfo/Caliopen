@@ -4,10 +4,12 @@ export const REMOTE_IDENTITY_STATUS_INACTIVE = 'inactive';
 export const PROVIDER_EMAIL = 'email';
 export const PROVIDER_GMAIL = 'gmail';
 export const PROVIDER_TWITTER = 'twitter';
+export const PROVIDER_MASTODON = 'mastodon';
 
 // XXX: should be in message module
 export const PROTOCOL_EMAIL = 'email';
 export const PROTOCOL_TWITTER = 'twitter';
+export const PROTOCOL_MASTODON = 'mastodon';
 // ---
 
 /* eslint-disable camelcase */

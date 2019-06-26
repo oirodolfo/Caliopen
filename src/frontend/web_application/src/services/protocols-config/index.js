@@ -1,5 +1,6 @@
 export const ASSOC_PROTOCOL_ICON = {
   email: 'envelope',
+  mastodon: 'mastodon',
   twitter: 'twitter',
   unknown: 'question-circle',
 };

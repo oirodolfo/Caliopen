@@ -4,10 +4,11 @@ import classnames from 'classnames';
 import { Trans } from '@lingui/react';
 import { AdvancedSelectFieldGroup, Icon } from '../../../../components';
 import { Participant } from '../../../../modules/message';
-import { IDENTITY_TYPE_TWITTER } from '../../../../modules/contact';
+import { IDENTITY_TYPE_TWITTER, IDENTITY_TYPE_MASTODON } from '../../../../modules/contact';
 
 const PROTOCOL_EMAIL = 'email';
 const PROTOCOL_TWITTER = 'twitter';
+const PROTOCOL_MASTODON = 'mastodon';
 
 class RecipientSelector extends PureComponent {
   static propTypes = {
@@ -42,6 +43,13 @@ class RecipientSelector extends PureComponent {
             {' '}{recipient.address}
           </Fragment>
         );
+      case PROTOCOL_MASTODON:
+        return (
+          <Fragment>
+            <Icon type="mastodon" />
+            {' '}{recipient.address}
+          </Fragment>
+        );
     }
   }
 
@@ -69,6 +77,14 @@ class RecipientSelector extends PureComponent {
           label: identity.name,
           contact_ids: [contact.contact_id],
           protocol: PROTOCOL_TWITTER,
+        }))) : []),
+      ...(contact.identities ? contact.identities
+        .filter(identity => [IDENTITY_TYPE_MASTODON].includes(identity.type))
+        .map(identity => (new Participant({
+          address: identity.name,
+          label: identity.name,
+          contact_ids: [contact.contact_id],
+          protocol: PROTOCOL_MASTODON,
         }))) : []),
     ];
 

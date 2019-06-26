@@ -1,6 +1,6 @@
 import { createSelector } from 'reselect';
 
-const messageEmmitters = ['smtp', 'twitterBroker'];
+const messageEmmitters = ['smtp', 'twitterBroker', 'mastodonBroker'];
 
 export const messageNotificationsSelector = createSelector(
   [state => state.notification],

@@ -13,6 +13,7 @@ export const newMessageIdsSelector = createSelector(
       switch (notif.emitter) {
         case 'smtp':
           return body.emailReceived;
+        case 'mastodonBroker':
         case 'twitterBroker':
           return body.dmReceived;
         default:

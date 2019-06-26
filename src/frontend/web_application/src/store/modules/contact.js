@@ -23,6 +23,7 @@ export const REQUEST_CONTACT_IDS_FOR_URI = 'co/contact/REQUEST_CONTACT_IDS_FOR_U
 const PROTOCOL_PREFIXES = {
   email: 'email',
   twitter: 'twitter',
+  mastodon: 'mastodon',
 };
 
 export function requestContacts(params = {}) {

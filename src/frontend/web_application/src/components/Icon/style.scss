@@ -10,4 +10,10 @@
   &--right-spaced {
     margin-right: $co-margin / 4;
   }
+
+  &--svg svg {
+    width: 1em;
+    height: 1em;
+  }
 }
+

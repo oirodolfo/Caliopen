@@ -4,7 +4,8 @@ import classnames from 'classnames';
 import { Trans } from '@lingui/macro'; // eslint-disable-line import/no-extraneous-dependencies
 import { AdvancedSelectFieldGroup, Icon } from '../../../../components';
 import {
-  PROVIDER_EMAIL, PROVIDER_GMAIL, PROVIDER_TWITTER, ProviderIcon,
+  PROVIDER_EMAIL, PROVIDER_GMAIL, PROVIDER_TWITTER, PROVIDER_MASTODON,
+  ProviderIcon,
 } from '../../../remoteIdentity';
 
 class IdentitySelector extends Component {
@@ -35,6 +36,7 @@ class IdentitySelector extends Component {
         return (<Icon type="email" />);
       case PROVIDER_GMAIL:
       case PROVIDER_TWITTER:
+      case PROVIDER_MASTODON:
         return (<ProviderIcon providerName={identity.infos.provider} size="normal" />);
     }
   }

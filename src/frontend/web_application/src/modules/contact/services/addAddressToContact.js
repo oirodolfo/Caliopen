@@ -1,4 +1,4 @@
-import { PROTOCOL_EMAIL, PROTOCOL_TWITTER } from '../../remoteIdentity';
+import { PROTOCOL_EMAIL, PROTOCOL_TWITTER, PROTOCOL_MASTODON } from '../../remoteIdentity';
 
 export const addAddressToContact = (contact, { address, protocol }) => {
   switch (protocol) {
@@ -11,6 +11,7 @@ export const addAddressToContact = (contact, { address, protocol }) => {
         ],
       };
     case PROTOCOL_TWITTER:
+    case PROTOCOL_MASTODON:
       return {
         ...contact,
         identities: [
@@ -32,7 +33,7 @@ export const addAddressesToContact = (contact, addresses) => {
 
   const identities = [
     ...(contact.identities ? contact.identities : []),
-    ...addresses.filter(address => address.protocol === PROTOCOL_TWITTER)
+    ...addresses.filter(address => [PROTOCOL_TWITTER, PROTOCOL_MASTODON].includes(address.protocol))
       .map(address => ({ address: address.identifier, type: address.protocol })),
   ];
 
