@@ -18,18 +18,16 @@ Décrire le mode de gestion de la file d'attente des notifications côté backen
 ```yaml  
 notifications:  
   - emitter: string      // backend entity that's emitting the message. (contacts facility, email facility, etc.)  
-    id: string           // universally unique id to unambiguously identify a notification message.  
+    notif_id: string           // universally unique id to unambiguously identify a notification message.  
     type: string         // a single word to describe message's type and give indication of importance level (event, info, feedback, warning, teaser, error, alert, etc.)  
     reference: string    // (optional) a reference number previously sent by frontend to link current notification to a previous action/event.  
     timestamp: int       // unix timestamp at which backend created the notification  
-    body: string         // could be a simple word or a more complex structure like a json, depending of the notification.  
-    children:            // an array of notifications. It allows to embed the result of a batch operation
-     - notification
+    body: string         // could be a simple word or a more complex structure like a json, depending of the notification. The structure can include other notifications, see new_message examples.
 ```
 
 ##### Les messages de notification comportent des 'headers' et un 'body'.
 
-les 'headers' (`emitter`, `id`, `type`, `references`) permettent d'identifier la notification et de la classifier.
+les 'headers' (`emitter`, `notif_id`, `type`, `references`) permettent d'identifier la notification et de la classifier.
 
 le `body` comporte le message/payload de la notification
 
@@ -47,16 +45,35 @@ le header `timestamp` est le timestamp unix du moment où la notification a ét�
 
 ##### notification générique de réception de messages :
 
-```yaml  
+```yaml
+total: 1
 notifications:  
-  - emitter: notifier  
-    id: xxxxx-xxxxx-xxxxx  
+  - emitter: <notifier>(imap_worker|…)
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: new_message  
     timestamp: 1518691674517  
-    body:  
-      message_id: xxxxxx-xxxxx-xxxxx
-      discussion_id: yyyyy-yyyy-yyyyy
-      type: email
+    body:
+      size: <nb>
+      elements:
+        - body:
+            message_id: xxxxxx-xxxxx-xxxxx
+            discussion_id: yyyyy-yyyy-yyyyy
+```
+
+##### notification de réception d'un grand nombre de message :
+
+```json
+{
+  "total": 1,
+  "notifications": [
+    {
+      "body": { "size": 646 },
+      "emitter": "imap_worker",
+      "notif_id": "e23fdf95-9750-11e9-a402-0242ac13000a",
+      "type": "new_message"
+    }
+  ]
+}
 ```
 
 ##### notification de fin d'import de vCards :
@@ -68,7 +85,7 @@ lors de son prochain call sur GET /v2/notifications, il pourrait recevoir la not
 ```yaml  
 notifications:  
   - emitter: contacts  
-    id: xxxxxx-xxxxx-xxxxx  
+    notif_id: xxxxxx-xxxxx-xxxxx  
     type: import_result
     reference: xxxxxxxxx     // could be a hash of the initial call to the API (POST /v1/imports + timestamp (+ headers ?))  
     timestamp: 1518691674517  
@@ -94,7 +111,7 @@ lors de son prochain call sur GET /v2/notifications, le frontend pourrait recevo
 ```yaml  
 notifications:  
   - emitter: email-broker  
-    id: xxxxx-xxxxx-xxxxx  
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: warning  
     reference: xxxxxx-xxxxx-xxxx // uuid of email sent  
     timestamp: 1518691674517  
@@ -113,7 +130,7 @@ lors de son prochain call sur GET /v2/notifications, le frontend pourrait recevo
 ```yaml  
 notifications:  
   - emitter: contacts  
-    id: xxxxx-xxxxx-xxxxx  
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: info  
     reference: xxxxxx-xxxxx-xxxx // uuid of contact modified  
     timestamp: 1518691674517  
@@ -125,7 +142,7 @@ notifications:
 ```yaml  
 notifications:  
   - emitter: notification-center  
-    id: xxxxx-xxxxx-xxxxx  
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: teaser  
     timestamp: 1518691674517  
     body: Pour améliorer votre PI vous pourriez faire ceci…  
@@ -136,31 +153,31 @@ En l'absence de filtre lors du call sur `/api/v2/notifications`, toutes les noti
 ```yaml  
 notifications:  
   - emitter: lmtp  
-    id: xxxxx-xxxxx-xxxxx  
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: event  
     timestamp: 1518691674517  
     body:  
       - emailReceived: xxxxxx-xxxxx-xxxxx   
   - emitter: contacts  
-    id: xxxxxx-xxxxx-xxxxx  
+    notif_id: xxxxxx-xxxxx-xxxxx  
     type: feedback  
     reference: xxxxxxxxx      
     timestamp: 1518691674517  
     body: success  
-  - emitter: lmtp 
-    id: xxxxx-xxxxx-xxxxx  
+  - emitter: lmtp
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: event  
     timestamp: 1518691674517  
     body:  
       emailReceived: xxxxxx-xxxxx-xxxxx // uuid of new email  
   - emitter: lmtp  
-    id: xxxxx-xxxxx-xxxxx  
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: event  
     timestamp: 1518691674517  
     body:  
       emailReceived: xxxxxx-xxxxx-xxxxx // uuid of new email  
   - emitter: notification-center  
-    id: xxxxx-xxxxx-xxxxx  
+    notif_id: xxxxx-xxxxx-xxxxx  
     type: teaser  
     timestamp: 1518691674517  
     body: Pour améliorer votre PI vous pourriez faire ceci…  
@@ -221,7 +238,7 @@ La table des notifications est stockées dans cassandra.
 CREATE TABLE user_notification (  
 user_id uuid,  
 timestamp_ timestamp,  
-id uuid,  
+notif_id uuid,  
 type ascii,  
 emitter text,  
 reference text,  
@@ -230,4 +247,3 @@ primary key(user_id, timestamp, id));
 ```
 
 Ces `primary keys` permettent de retrouver/supprimer toutes les notifications d'un utilisateur, ou celles d'un utilisateur dans un range de timestamp.
-
