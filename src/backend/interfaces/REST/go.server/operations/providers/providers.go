@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	swgErr "github.com/go-openapi/errors"
 	"net/http"
+	"net/url"
 )
 
 // GetProvidersList handles get …/providers
@@ -35,7 +36,38 @@ func GetProvider(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	provider, errC := caliopen.Facilities.RESTfacility.GetProviderOauthFor(userID, ctx.Param("provider_name"))
+	providerName := ctx.Param("provider_name")
+	if providerName == "" {
+		e := swgErr.New(http.StatusUnprocessableEntity, "provider name is empty")
+		http_middleware.ServeError(ctx.Writer, ctx.Request, e)
+		ctx.Abort()
+		return
+	}
+	var instance string
+	if providerName == "mastodon" {
+		rawUrl := ctx.Query("instance")
+		if rawUrl == "" {
+			// TODO : return registered instances
+			e := swgErr.New(http.StatusNotImplemented, "not implemented")
+			http_middleware.ServeError(ctx.Writer, ctx.Request, e)
+			ctx.Abort()
+			return
+		} else {
+			u, err := url.Parse(rawUrl)
+			if err != nil || (u.Host == "" && u.Path == "") {
+				e := swgErr.New(http.StatusUnprocessableEntity, "malformed mastodon instance address")
+				http_middleware.ServeError(ctx.Writer, ctx.Request, e)
+				ctx.Abort()
+				return
+			}
+			if u.Host != "" {
+				instance = u.Host
+			} else {
+				instance = u.Path
+			}
+		}
+	}
+	provider, errC := caliopen.Facilities.RESTfacility.GetProviderOauthFor(userID, providerName, instance)
 	if errC != nil {
 		returnedErr := new(swgErr.CompositeError)
 		switch errC.Code() {
