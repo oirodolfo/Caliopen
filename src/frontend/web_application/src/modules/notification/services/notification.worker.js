@@ -10,6 +10,8 @@ class Poller {
 
   intervalId = undefined
 
+  notificationFilters = {};
+
   installInterceptor = (device) => {
     if (this.interceptor) return;
 
@@ -37,7 +39,9 @@ class Poller {
     this.installInterceptor(device);
     this.intervalId = setInterval(async () => {
       try {
-        const { data: results } = await this.client.get('/api/v2/notifications');
+        const params = Object.keys(this.notificationFilters).map(key => `${key}=${this.notificationFilters[key]}`).join('&');
+        const queryString = params.length > 0 ? `?${params}` : '';
+        const { data: results } = await this.client.get(`/api/v2/notifications${queryString}`);
         self.postMessage({ results });
       } catch (err) {
         if (err.response.status === 401) {
@@ -69,9 +73,16 @@ class Poller {
     }
   };
 
+  handleUpdateNotificationFilters = (message) => {
+    if (message.action === 'updateFilters') {
+      this.notificationFilters = message.filters;
+    }
+  }
+
   handleEvent = (event) => {
     this.handleStart(event.data);
     this.handleStop(event.data);
+    this.handleUpdateNotificationFilters(event.data);
   }
 }
 

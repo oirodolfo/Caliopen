@@ -13,6 +13,7 @@ class NotificationProvider extends Component {
   static propTypes = {
     children: PropTypes.node,
     updateNotifications: PropTypes.func.isRequired,
+    setInitialized: PropTypes.func.isRequired,
     notifications: PropTypes.arrayOf(PropTypes.shape({})),
     user: PropTypes.shape({}),
   };
@@ -41,9 +42,16 @@ class NotificationProvider extends Component {
     });
   }
 
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.user !== this.props.user) {
-      this.toggleWorker(!!nextProps.user);
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.user !== this.props.user) {
+      this.toggleWorker(!!this.props.user);
+    }
+
+    if (prevState.isWorking === true && this.state.isWorking === false) {
+      // try to restart after a while
+      setTimeout(() => {
+        this.startWorker();
+      }, 1 * 60 * 1000);
     }
   }
 
@@ -83,6 +91,13 @@ class NotificationProvider extends Component {
     });
   }
 
+  updateLastNotifId = (lastNotif) => {
+    this.worker.postMessage({
+      action: 'updateFilters',
+      filters: { from: lastNotif.notif_id },
+    });
+  };
+
   handleWorkerStatus = (message) => {
     const { status } = message;
     if (!status) {
@@ -107,13 +122,18 @@ class NotificationProvider extends Component {
     if (!results) {
       return;
     }
-    const { updateNotifications, notifications } = this.props;
+    const { updateNotifications, notifications, setInitialized } = this.props;
     const prevNotifIds = notifications.map(notif => notif.notif_id).sort();
     const notifIds = results.notifications.map(notif => notif.notif_id).sort();
 
     if (!isEqual(prevNotifIds, notifIds)) {
+      const lastNotification = [...results.notifications].pop();
+      if (lastNotification) {
+        this.updateLastNotifId(lastNotification);
+      }
       updateNotifications(results.notifications);
     }
+    setInitialized();
   }
 
   render() {

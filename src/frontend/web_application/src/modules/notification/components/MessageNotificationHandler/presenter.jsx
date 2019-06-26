@@ -5,24 +5,25 @@ import isEqual from 'lodash.isequal';
 import { withSettings } from '../../../../modules/settings';
 import { notify as browserNotify } from '../../../../services/browser-notification';
 
+const getNbNewMessages = notifications => notifications
+  .reduce((acc, notif) => acc + notif.body.size, 0);
+
 @withI18n()
 @withSettings()
 class MessageNotificationHandler extends Component {
   static propTypes = {
-    requestDiscussions: PropTypes.func.isRequired,
-    requestNewMessages: PropTypes.func.isRequired,
-    newMessageIds: PropTypes.arrayOf(PropTypes.string),
+    invalidateDiscussions: PropTypes.func.isRequired,
+    invalidateCollections: PropTypes.func.isRequired,
+    initialized: PropTypes.bool,
+    notifications: PropTypes.arrayOf(PropTypes.shape({})),
     settings: PropTypes.shape({}),
     i18n: PropTypes.shape({ _: PropTypes.func.isRequired }).isRequired,
   };
 
   static defaultProps = {
-    newMessageIds: [],
+    initialized: false,
+    notifications: [],
     settings: undefined,
-  };
-
-  state = {
-    hasActivity: false,
   };
 
   componentDidMount() {
@@ -30,39 +31,34 @@ class MessageNotificationHandler extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (!this.state.hasActivity && !isEqual(prevProps.newMessageIds, this.props.newMessageIds)) {
+    if (!isEqual(prevProps.notifications, this.props.notifications)) {
       this.handleNotifications(this.props);
     }
   }
 
-  handleNotifications = async ({ newMessageIds, settings }) => {
+  handleNotifications = async ({ notifications, settings }) => {
     if (!settings) {
       return;
     }
 
-    if (!newMessageIds || newMessageIds.length === 0) {
+    if (notifications.length === 0) {
       return;
     }
 
-    this.setState({ hasActivity: true });
+    const { invalidateDiscussions, invalidateCollections, initialized } = this.props;
 
-    try {
-      const { requestDiscussions, requestNewMessages } = this.props;
-
-      await requestNewMessages(newMessageIds);
-      await requestDiscussions();
-    } catch (e) {
-      throw e;
-    } finally {
-      this.setState({ hasActivity: false });
+    if (initialized) {
+      invalidateDiscussions();
+      invalidateCollections();
     }
 
     if (settings.notification_enabled) {
       const { i18n } = this.props;
+      const nbNewMessages = getNbNewMessages(notifications);
 
       // this notify only when document is not visible
       browserNotify({
-        message: i18n._('desktop.notification.new_messages', [newMessageIds.length], {
+        message: i18n._('desktop.notification.new_messages', [nbNewMessages], {
           defaults: 'You received {0} new messages',
         }),
       });
