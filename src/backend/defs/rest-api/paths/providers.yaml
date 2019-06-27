@@ -40,6 +40,10 @@ providers_{provider_name}:
       in: path
       type: string
       required: true
+    - name: identifier
+      in: query
+      type: string
+      required: false
     produces:
     - application/json
     responses:

@@ -3426,6 +3426,12 @@
             "in": "path",
             "type": "string",
             "required": true
+          },
+          {
+            "name": "instance",
+            "in": "query",
+            "type": "string",
+            "required": false
           }
         ],
         "produces": [

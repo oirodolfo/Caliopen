@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	swgErr "github.com/go-openapi/errors"
 	"net/http"
-	"net/url"
 )
 
 // GetProvidersList handles get …/providers
@@ -43,31 +42,18 @@ func GetProvider(ctx *gin.Context) {
 		ctx.Abort()
 		return
 	}
-	var instance string
+	var identifier string
 	if providerName == "mastodon" {
-		rawUrl := ctx.Query("instance")
-		if rawUrl == "" {
+		identifier = ctx.Query("identifier")
+		if identifier == "" {
 			// TODO : return registered instances
-			e := swgErr.New(http.StatusNotImplemented, "not implemented")
+			e := swgErr.New(http.StatusUnprocessableEntity, "missing mastodon identifier")
 			http_middleware.ServeError(ctx.Writer, ctx.Request, e)
 			ctx.Abort()
 			return
-		} else {
-			u, err := url.Parse(rawUrl)
-			if err != nil || (u.Host == "" && u.Path == "") {
-				e := swgErr.New(http.StatusUnprocessableEntity, "malformed mastodon instance address")
-				http_middleware.ServeError(ctx.Writer, ctx.Request, e)
-				ctx.Abort()
-				return
-			}
-			if u.Host != "" {
-				instance = u.Host
-			} else {
-				instance = u.Path
-			}
 		}
 	}
-	provider, errC := caliopen.Facilities.RESTfacility.GetProviderOauthFor(userID, providerName, instance)
+	provider, errC := caliopen.Facilities.RESTfacility.GetProviderOauthFor(userID, providerName, identifier)
 	if errC != nil {
 		returnedErr := new(swgErr.CompositeError)
 		switch errC.Code() {
@@ -85,7 +71,8 @@ func GetProvider(ctx *gin.Context) {
 
 // CallbackHandler handles get …/providers/:provider_name/callback
 func CallbackHandler(ctx *gin.Context) {
-	switch ctx.Param("provider_name") {
+	provider := ctx.Param("provider_name")
+	switch provider {
 	case "twitter":
 		token := ctx.Query("oauth_token")
 		verifier := ctx.Query("oauth_verifier")
@@ -98,10 +85,15 @@ func CallbackHandler(ctx *gin.Context) {
 			return
 		}
 		ctx.Status(http.StatusNoContent)
-	case "gmail":
+	case "gmail", "mastodon":
 		state := ctx.Query("state")
 		code := ctx.Query("code")
-		_, errC := caliopen.Facilities.RESTfacility.CreateGmailIdentity(state, code)
+		var errC CaliopenError
+		if provider == "gmail" {
+			_, errC = caliopen.Facilities.RESTfacility.CreateGmailIdentity(state, code)
+		} else {
+			_, errC = caliopen.Facilities.RESTfacility.CreateMastodonIdentity(state, code)
+		}
 		if errC != nil {
 			returnedErr := new(swgErr.CompositeError)
 			returnedErr = swgErr.CompositeValidationError(swgErr.New(http.StatusFailedDependency, "RESTfacility returned error"), errC, errC.Cause())
