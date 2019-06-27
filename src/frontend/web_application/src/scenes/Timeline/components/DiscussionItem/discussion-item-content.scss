@@ -1,0 +1,60 @@
+@import '../../../../styles/common';
+@import '../../../../styles/vendor/bootstrap_foundation-sites';
+
+$s-discussion-item__spacing: 0.5rem;
+
+.s-discussion-item-content {
+  display: grid;
+  grid-template-areas:
+    "participants participants participants protocol"
+    "subject subject date date"
+    "excerpt excerpt excerpt excerpt"
+  ;
+  grid-template-columns: auto auto auto 1fr;
+  min-height: $co-component__height;
+  color: $co-color__fg__text--higher;
+  font-weight: 400;
+  line-height: 1.5rem;
+  text-decoration: none;
+
+  @include breakpoint(medium) {
+    grid-template-areas:
+      "participants participants protocol date"
+      "subject excerpt excerpt excerpt"
+    ;
+    grid-template-columns: auto auto 1fr auto;
+  }
+
+  &__participants {
+    grid-area: participants;
+    color: $co-blue;
+  }
+
+  &__excerpt {
+    grid-area: excerpt;
+    color: $co-color__fg__text--higher;
+    @include breakpoint(medium) {
+      margin-left: $s-discussion-item__spacing * 2;
+    }
+  }
+
+  &__subject {
+    grid-area: subject;
+    color: $co-color__fg__text--lower;
+    &--unread {
+      font-weight: 800;
+    }
+  }
+
+  &__protocol {
+    grid-area: protocol;
+    margin-left: $s-discussion-item__spacing;
+    text-align: right;
+ }
+
+  &__date {
+    grid-area: date;
+    margin-left: $s-discussion-item__spacing;
+    text-align: right;
+  }
+}

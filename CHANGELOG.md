@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- Better Timeline display for large and small screens.
+
 ## [0.22] 2019-06-26
 
 ## Added

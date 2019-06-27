@@ -4,13 +4,21 @@
 $s-discussion-item__spacing: 0.5rem;
 
 .s-discussion-item {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: stretch;
+  @include flex-grid-row($size: expand);
+  position: relative;
+  align-items: center;
+  min-height: $co-component__height;
+  padding-top: $co-component__spacing;
+  padding-right: $co-component__spacing;
+  padding-bottom: $co-component__spacing;
+
   border-left: 0.5rem solid $co-color__fg__back--lower;
   background-color: $co-color__fg__back--low;
-  line-height: 3rem;
+
+  @include breakpoint(medium) {
+    padding-top: $co-component__spacing * 2;
+    padding-bottom: $co-component__spacing * 2;
+  }
 
   &--ugly {
     border-left: 0.5rem solid map_get($privacy-palette, 'ugly');
@@ -32,65 +40,13 @@ $s-discussion-item__spacing: 0.5rem;
     background-color: $co-color__fg__back;
   }
 
-  &__message-type {
-    justify-self: flex-end;
-    margin: 0 $s-discussion-item__spacing;
- }
-
-  &__tags {
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: row;
-    margin: 0 $s-discussion-item__spacing;
+  &__col-avatar {
+    @include flex-grid-column(shrink);
   }
 
-  &__tag {
-    margin: 0 0.25rem;
-
-    @include breakpoint(small) {
-      display: none;
-    }
-  }
-
-  &__participants {
-    flex-shrink: 1;
-    width: auto;
-    min-width: 20%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: $co-blue;
-    white-space: nowrap;
-
-    @include breakpoint(medium) {
-      flex: 0 0 10.1rem;
-      width: 10.1rem;
-      margin-right: $s-discussion-item__spacing;
-    }
-  }
-
-  &__message_excerpt {
-    flex: 1 2 auto;
-    min-width: 30%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: $co-color__fg__text--higher;
-    font-weight: 400;
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  &__message_subject {
-    color: $co-color__fg__text--lower;
-    font-weight: 800;
-  }
-
-  &__message-date {
-    flex: 0 1 auto;
-    margin: auto $s-discussion-item__spacing;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: right;
-    white-space: nowrap;
+  &__col-content {
+    @include flex-grid-size;
+    min-width: 0; // https://github.com/zurb/foundation-sites/pull/8511
   }
 
   &__select {

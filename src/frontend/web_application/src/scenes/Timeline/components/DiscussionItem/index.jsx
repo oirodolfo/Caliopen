@@ -3,11 +3,12 @@ import PropTypes from 'prop-types';
 import Moment from 'react-moment';
 import classnames from 'classnames';
 // import { withI18n } from '@lingui/react';
-import { Badge, Icon, Link } from '../../../../components';
+import { Icon, Link, TextBlock } from '../../../../components';
 import ParticipantsIconLetter from '../../../../components/ParticipantsIconLetter';
 import { getAveragePI, getPiClass } from '../../../../modules/pi';
 import { ParticipantLabel } from '../../../../modules/message';
 import './style.scss';
+import './discussion-item-content.scss';
 
 // @withI18n()
 class DiscussionItem extends PureComponent {
@@ -58,24 +59,16 @@ class DiscussionItem extends PureComponent {
   }
 
   renderMessageSubject = (discussion) => {
-    const { last_message_subject: lastMessageSubject } = discussion;
+    const { last_message_subject: lastMessageSubject, unread_count: unreadCount } = discussion;
 
     if (lastMessageSubject) {
-      return <strong className="s-discussion-item__message_subject">{lastMessageSubject}</strong>;
+      return (
+        <TextBlock className={classnames('s-discussion-item-content__subject', { 's-discussion-item-content__subject--unread': unreadCount > 0 })}>{lastMessageSubject}</TextBlock>
+      );
     }
 
     return null;
   }
-
-  renderTags = ({ tags }) => (
-    tags && (
-      <ul className="s-discussion-item__tags">
-        {tags.map(tag => (
-          <li key={tag.name} className="s-discussion-item__tag"><Badge>{tag.name}</Badge></li>
-        ))}
-      </ul>
-    )
-  );
 
   renderParticipants() {
     const { discussion: { discussion_id: discussionId } } = this.props;
@@ -117,16 +110,22 @@ class DiscussionItem extends PureComponent {
           `s-discussion-item--${getPiClass(piAggregate)}`
         )}
       >
-        <ParticipantsIconLetter labels={participants.map(participant => participant.label)} />
-        <a className="s-discussion-item__participants">{this.renderParticipants()}</a>
-        <Link to={`/discussions/${discussionId}#${lastMessageId}`} className="s-discussion-item__message_excerpt">
-          {this.renderMessageSubject(this.props.discussion)}
-          {' '}
-          {excerpt}
-        </Link>
-        {this.renderTags(this.props.discussion)}
-        <span className="s-discussion-item__message-type"><Icon type={iconProtocol} /></span>
-        <Moment className="s-discussion-item__message-date" fromNow locale={settings.default_locale} titleFormat="LLLL" withTitle>{date}</Moment>
+        <div className="s-discussion-item__col-avatar">
+          <ParticipantsIconLetter labels={participants.map(participant => participant.label)} />
+        </div>
+        <div className="s-discussion-item__col-content">
+          <Link to={`/discussions/${discussionId}#${lastMessageId}`} noDecoration className="s-discussion-item-content">
+            <TextBlock className="s-discussion-item-content__participants">{this.renderParticipants()}</TextBlock>
+            {this.renderMessageSubject(this.props.discussion)}
+            <TextBlock className="s-discussion-item-content__excerpt">
+              {excerpt}
+            </TextBlock>
+            <span className="s-discussion-item-content__protocol"><Icon type={iconProtocol} /></span>
+            <TextBlock className="s-discussion-item-content__date">
+              <Moment fromNow locale={settings.default_locale} titleFormat="LLLL" withTitle>{date}</Moment>
+            </TextBlock>
+          </Link>
+        </div>
         {/*
         <div className="s-discussion-item__select">
           <Checkbox
