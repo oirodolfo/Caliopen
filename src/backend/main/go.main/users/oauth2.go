@@ -85,6 +85,20 @@ func SetGoogleOauthConfig(provider Provider, hostname string) *oauth2.Config {
 	}
 }
 
+func SetMastodonOauthConfig(provider Provider, hostname string) *oauth2.Config {
+	return &oauth2.Config{
+		ClientID:     provider.Infos["client_id"],
+		ClientSecret: provider.Infos["client_secret"],
+		Endpoint: oauth2.Endpoint{
+			AuthURL:   provider.Infos["address"] + "/oauth/authorize",
+			TokenURL:  provider.Infos["address"] + "/oauth/token",
+			AuthStyle: oauth2.AuthStyleInParams,
+		},
+		RedirectURL: hostname + provider.OauthCallbackUri,
+		Scopes:      []string{"read", "write", "follow"},
+	}
+}
+
 // GetValidGmailAccessToken checks identity's access token validity.
 // If token has expired a new one is retrieved by the mean of refresh token,
 // new credentials are embedded in user identity and credentialsUpdated is set to true.
@@ -125,6 +139,19 @@ func getValidGmailAccessToken(uId *UserIdentity, provider Provider, hostname str
 		credentialsUpdated = true
 		return
 	}
+	return
+}
+
+/* Mastodon API */
+
+func SetMastodonAuthRequestUrl(provider *Provider, hostname string) (state string, err error) {
+
+	state = randomState()
+	provider.OauthCallbackUri = fmt.Sprintf(CALLBACK_BASE_URI, "mastodon")
+
+	config := SetMastodonOauthConfig(*provider, hostname)
+
+	provider.OauthRequestUrl = config.AuthCodeURL(state, oauth2.AccessTypeOffline)
 	return
 }
 

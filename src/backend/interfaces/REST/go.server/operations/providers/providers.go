@@ -59,6 +59,8 @@ func GetProvider(ctx *gin.Context) {
 		switch errC.Code() {
 		case NotFoundCaliopenErr:
 			returnedErr = swgErr.CompositeValidationError(swgErr.New(http.StatusNotFound, "RESTfacility returned error"), errC, errC.Cause())
+		case UnprocessableCaliopenErr:
+			returnedErr = swgErr.CompositeValidationError(swgErr.New(http.StatusUnprocessableEntity, "RESTfacility returned error"), errC, errC.Cause())
 		default:
 			returnedErr = swgErr.CompositeValidationError(swgErr.New(http.StatusFailedDependency, "RESTfacility returned error"), errC, errC.Cause())
 		}
@@ -92,6 +94,9 @@ func CallbackHandler(ctx *gin.Context) {
 		if provider == "gmail" {
 			_, errC = caliopen.Facilities.RESTfacility.CreateGmailIdentity(state, code)
 		} else {
+			if state == "" {
+				ctx.Status(http.StatusNoContent)
+			}
 			_, errC = caliopen.Facilities.RESTfacility.CreateMastodonIdentity(state, code)
 		}
 		if errC != nil {

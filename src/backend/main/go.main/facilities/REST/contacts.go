@@ -359,6 +359,28 @@ func addIdentityToContact(storeContact backends.ContactStorage, indexContact bac
 			newContact.Identities = append(contact.Identities, *si)
 		}
 		updatedFields["Identities"] = newContact.Identities
+	case MastodonProtocol:
+		// prevent duplicate
+		for _, socialId := range contact.Identities {
+			if socialId.Type == MastodonProtocol && socialId.Name == identity.Identifier {
+				log.Infof("[addIdentityToContact] social identity %s already exists for user %s, aborting", identity.Identifier, identity.UserId)
+				return contact, nil
+			}
+		}
+		si := new(SocialIdentity)
+		si.MarshallNew()
+		si.Type = MastodonProtocol
+		si.Name = identity.Identifier
+		si.Infos = map[string]string{
+			"mastodon_id":  identity.Infos["twitterid"],
+			"display_name": identity.DisplayName,
+		}
+		if contact.Identities == nil {
+			newContact.Identities = []SocialIdentity{*si}
+		} else {
+			newContact.Identities = append(contact.Identities, *si)
+		}
+		updatedFields["Identities"] = newContact.Identities
 	default:
 		return nil, NewCaliopenErrf(UnprocessableCaliopenErr, "[addIdentityToContact] unknown protocol %s for identity %s. Can't add identity to contact card.", identity.Protocol, identity.Id)
 	}

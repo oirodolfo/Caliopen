@@ -12,24 +12,22 @@
     <script type="text/javascript">
         let pop;
         let intervalId;
+        let headers = {
+            "x-caliopen-device-id": "6894dd9f-e40b-42f3-affd-134a2e86d6b1",
+            "x-caliopen-device-signatue": "xxxxxx",
+            "authorization": "Basic NTFiMmExMzktODA0YS00N2VmLWI5ZmQtNTI3MjFmODFiN2RmOjNlYjNmODMxZWMzNjExZDMyOGZjODBhNjA3NjBkYmUzZWJkN2VhMTA="
+        }
 
         function handleClickTwitter() {
             console.log('start');
             const callbackUrl = 'http://localhost:6544/api/v2/providers/twitter/callback';
             let apiTwitterUrl;
             // Il est NÉCESSAIRE d'ouvrir la popup dans un context synchrone sinon elle sera bloquée par le navigateur
-            // cf. (je retrouve plus le lien)
             // on ne peut pas non plus mettre de data:,whatever (genre <h1>Loading..</h1> ça aurait été sympa)
             if (!pop || pop.closed) {
                 pop = window.open('', 'foo', 'resizable,scrollbars,status');
             }
-            fetch('http://localhost:6544/api/v2/providers/twitter', {
-                headers: {
-                    "x-caliopen-device-id": "6894dd9f-e40b-42f3-affd-134a2e86d6b1",
-                    "x-caliopen-device-signatue": "xxxxxx",
-                    "authorization": "Basic N2E5ZThkMTQtMjNiNy00YWEyLTgxN2UtNjFlNWI2ZDFmY2RiOmRiMTI2MzM1NzQwZmMxMGY5YTQwMjZlMjdhN2U0Y2E0YjdiZDBlYWQ="
-                }
-            }).then((response) => {
+            fetch('http://localhost:6544/api/v2/providers/twitter', {headers}).then((response) => {
                 // mock response:
                 // response.json = () => Promise.resolve({ twitter_url: 'http://twitter.com' });
 
@@ -87,20 +85,76 @@
             if (!pop || pop.closed) {
                 pop = window.open('', 'foo', 'resizable,scrollbars,status');
             }
-            fetch('http://localhost:6544/api/v2/providers/gmail', {
-                headers: {
-                    "x-caliopen-device-id": "6894dd9f-e40b-42f3-affd-134a2e86d6b1",
-                    "x-caliopen-device-signatue": "xxxxxx",
-                    "authorization": "Basic N2E5ZThkMTQtMjNiNy00YWEyLTgxN2UtNjFlNWI2ZDFmY2RiOmRiMTI2MzM1NzQwZmMxMGY5YTQwMjZlMjdhN2U0Y2E0YjdiZDBlYWQ="
-                }
-            }).then((response) => {
+            fetch('http://localhost:6544/api/v2/providers/gmail', {headers}).then((response) => {
                 // mock response:
                 // response.json = () => Promise.resolve({ twitter_url: 'http://twitter.com' });
 
                 return response.json().then((body) => {
+                    console.log(body)
                     apiGmailUrl = body.oauth_request_url;
                     // on redirige la popup vers la bonne url maintenant qu'on a tout ce qu'il faut
                     pop.location.href = apiGmailUrl;
+
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                    }
+
+                    let inc = 0;
+                    intervalId = setInterval(() => {
+                        inc++;
+
+                        if (pop.closed) {
+                            clearInterval(intervalId);
+                            console.log('popup has been closed');
+                            // refresh remote identity list & clear form & **eventually** notify the user notify Caliopen has not been authorized to fetch the remote account
+                            return;
+                        }
+
+                        try {
+                            if (pop.location.href.startsWith(callbackUrl)) {
+                                clearInterval(intervalId);
+                                pop.close();
+                                console.log('authorization process ended');
+                                return;
+                            }
+                        } catch (err) {
+                            console.log('popup still on the remote');
+                        }
+
+
+                        if (inc > 3600) {
+                            clearInterval(intervalId);
+                            console.log('nothing happend since 1H');
+                            // refresh remote identity list & clear form & notify the user Caliopen has not been authorized to fetch the remote account
+                        }
+                    }, 500);
+                });
+            }).catch((err) => {
+                console.error({err});
+            });
+        }
+
+        function handleClickMastodon() {
+            console.log('start');
+            const identifier = encodeURI(document.getElementById("inMasto").value);
+            const callbackUrl = 'http://localhost:6544/api/v2/providers/mastodon/callback?identifier=' + identifier;
+
+            let apiMastodonUrl;
+            // Il est NÉCESSAIRE d'ouvrir la popup dans un context synchrone sinon elle sera bloquée par le navigateur
+            // cf. (je retrouve plus le lien)
+            // on ne peut pas non plus mettre de data:,whatever (genre <h1>Loading..</h1> ça aurait été sympa)
+            if (!pop || pop.closed) {
+                pop = window.open('', 'foo', 'resizable,scrollbars,status');
+            }
+            fetch('http://localhost:6544/api/v2/providers/mastodon?identifier=' + identifier, {headers}).then((response) => {
+                // mock response:
+                // response.json = () => Promise.resolve({ twitter_url: 'http://twitter.com' });
+
+                return response.json().then((body) => {
+                    apiMastodonUrl = body.oauth_request_url;
+                    console.log(body)
+                    // on redirige la popup vers la bonne url maintenant qu'on a tout ce qu'il faut
+                    pop.location.href = apiMastodonUrl;
 
                     if (intervalId) {
                         clearInterval(intervalId);
@@ -150,6 +204,10 @@
 <button class="button" onclick="handleClickGmail()">
     Login with Gmail
 </button>
+<button class="button" onclick="handleClickMastodon()">
+    Login with Mastodon
+</button>
+<input id="inMasto">
 <div class="results"></div>
 </body>
 </html>

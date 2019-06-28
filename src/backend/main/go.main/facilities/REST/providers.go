@@ -10,10 +10,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/dghubble/oauth1"
 	twitterOAuth1 "github.com/dghubble/oauth1/twitter"
+	"github.com/mattn/go-mastodon"
 	"github.com/satori/go.uuid"
 	"golang.org/x/oauth2"
 	googleApi "google.golang.org/api/oauth2/v2"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -28,10 +31,15 @@ func (rest *RESTfacility) RetrieveProvidersList() (providers []Provider, err err
 	return providers, errors.New("providers slice is nil")
 }
 
+func (rest *RESTfacility) RetrieveRegisteredMastodon() (instances []Provider, err error) {
+
+	return nil, errors.New("not implemented")
+}
+
 // GetProviderOauthFor returns provider's params required for authenticated user to initiate an Oauth request
 // In case of Twitter, auth request url is fetched from twitter API endpoint on the fly.
 // For all requests, an Oauth session cache is initialized for requesting user, making use of cache facility.
-func (rest *RESTfacility) GetProviderOauthFor(userId, name string) (provider Provider, err CaliopenError) {
+func (rest *RESTfacility) GetProviderOauthFor(userId, name, identifier string) (provider Provider, err CaliopenError) {
 	provider, found := rest.providers[name]
 	if found {
 		switch provider.Name {
@@ -39,7 +47,7 @@ func (rest *RESTfacility) GetProviderOauthFor(userId, name string) (provider Pro
 			requestToken, requestSecret, e := setTwitterAuthRequestUrl(&provider, rest.Hostname)
 			if e != nil {
 				log.WithError(e).Errorf("[GetProviderOauthFor] failed to set twitter auth request for user %s, provider %s", userId, name)
-				err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to set twitter aut request")
+				err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to set twitter auth request")
 				return
 			}
 			cacheErr := rest.Cache.SetOauthSession(requestToken, &OauthSession{
@@ -55,7 +63,7 @@ func (rest *RESTfacility) GetProviderOauthFor(userId, name string) (provider Pro
 			state, e := users.SetGoogleAuthRequestUrl(&provider, rest.Hostname)
 			if e != nil {
 				log.WithError(e).Errorf("[GetProviderOauthFor] failed to set gmail auth request for user %s, provider %s", userId, name)
-				err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to set twitter aut request")
+				err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to set gmail auth request")
 				return
 			}
 			cacheErr := rest.Cache.SetOauthSession(state, &OauthSession{
@@ -66,6 +74,82 @@ func (rest *RESTfacility) GetProviderOauthFor(userId, name string) (provider Pro
 				err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to set gmail Oauth session in cache")
 				return
 			}
+		case "mastodon":
+			// identifier should be in the format `@username@server.tld` or `username@server.tld`
+			identifier = strings.TrimPrefix(identifier, "@")
+			account := strings.Split(identifier, "@")
+			if len(account) != 2 || account[0] == "" || account[1] == "" {
+				e := fmt.Errorf("[GetProviderOauthFor] missing or malformed mastodon identifier : <%s>", identifier)
+				log.WithError(e)
+				err = WrapCaliopenErrf(e, UnprocessableCaliopenErr, "[GetProviderOauthFor] failed to set mastodon auth request")
+				return
+			}
+			u, e := url.Parse(account[1])
+			if e != nil || (u.Host == "" && u.Path == "") {
+				log.WithError(e)
+				err = WrapCaliopenErrf(e, UnprocessableCaliopenErr, "[GetProviderOauthFor] malformed mastodon instance : <%s>", account[1])
+				return
+			}
+			var instance string
+			if u.Host != "" {
+				instance = u.Host
+			} else {
+				instance = u.Path
+			}
+
+			// check if caliopen is already registered on instance
+			mastoInstance, e := rest.store.RetrieveProvider("mastodon", instance)
+			if e != nil || mastoInstance == nil {
+				// else, register this caliopen app to mastodon instance
+				app, e := mastodon.RegisterApp(context.Background(), &mastodon.AppConfig{
+					Server:       "https://" + instance,
+					ClientName:   "Caliopen@" + rest.Hostname,
+					Scopes:       "read write follow",
+					Website:      "https://" + rest.Hostname,
+					RedirectURIs: rest.Hostname + fmt.Sprintf(users.CALLBACK_BASE_URI, "mastodon"),
+				})
+				if e != nil {
+					err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to register on mastodon instance <%s>", userId, name)
+					return
+				}
+				// => save instance's params into db for next time
+				mastoInstance = new(Provider)
+				mastoInstance.Name = name
+				mastoInstance.Instance = instance
+				mastoInstance.Protocol = "mastodon"
+				mastoInstance.OauthRequestUrl = app.AuthURI
+				mastoInstance.Infos = map[string]string{}
+				mastoInstance.Infos["client_id"] = app.ClientID
+				mastoInstance.Infos["client_secret"] = app.ClientSecret
+				mastoInstance.Infos["address"] = "https://" + instance
+				mastoInstance.Infos["auth_uri"] = app.AuthURI
+				e = rest.store.CreateProvider(mastoInstance)
+				if e != nil {
+					log.WithError(e).Warnf("[GetProviderOauthFor] failed to save instance param in db for mastoInstance %+v", mastoInstance)
+				}
+			} else {
+				mastoInstance.Protocol = "mastodon"
+				mastoInstance.OauthRequestUrl = mastoInstance.Infos["auth_uri"]
+			}
+			state, e := users.SetMastodonAuthRequestUrl(mastoInstance, rest.Hostname)
+			provider = *mastoInstance
+			if e != nil {
+				err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to set mastodon auth request for user %s, on mastodon instance <%s>", userId, instance)
+				return
+			}
+			cacheErr := rest.Cache.SetOauthSession(state, &OauthSession{
+				UserId: userId,
+				Params: map[string]string{
+					"instance": instance,
+					"account":  account[0],
+				},
+			})
+			if cacheErr != nil {
+				log.WithError(cacheErr)
+				err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[GetProviderOauthFor] failed to set Oauth session in cache for user %s, provider %s", userId, name)
+				return
+			}
+
 		default:
 			err = NewCaliopenErr(NotImplementedCaliopenErr, "not implemented")
 			return
@@ -303,6 +387,120 @@ func (rest *RESTfacility) CreateGmailIdentity(state, code string) (remoteId stri
 	default:
 		log.Errorf("[CreateGmailIdentity] inconsistency in store : more than one identity found with email <%s>. foundIdentities=%+v", googleUser.Email, foundIdentities)
 		err = NewCaliopenErrf(FailDependencyCaliopenErr, "[CreateGmailIdentity] inconsistency in store : more than one identity found with email <%s>", googleUser.Email)
+		return
+	}
+	return
+}
+
+func (rest *RESTfacility) CreateMastodonIdentity(state, code string) (remoteId string, err CaliopenError) {
+
+	// start by checking if we have the state in cache
+	oauthCache, e := rest.Cache.GetOauthSession(state)
+	if e != nil {
+		log.WithError(e).Errorf("[CreateMastodonIdentity] failed to retrieve Oauth session in cache for state %s", state)
+		err = WrapCaliopenErrf(e, NotFoundCaliopenErr, "[CreateMastodonIdentity] failed to retrieve Oauth session in cache for state %s", state)
+		return
+	}
+
+	mastodonProvider, e := rest.store.RetrieveProvider("mastodon", oauthCache.Params["instance"])
+	if e != nil || mastodonProvider == nil {
+		log.WithError(e)
+		err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[CreateMastodonIdentity] failed to retrieve mastodon instance %s from db", oauthCache.Params["instance"])
+		return
+	}
+	mastodonProvider.OauthCallbackUri = fmt.Sprintf(users.CALLBACK_BASE_URI, "mastodon")
+
+	ctx := context.Background()
+
+	// get access token that will be added to UserIdentity.Credentials
+	oauthConfig := users.SetMastodonOauthConfig(*mastodonProvider, rest.Hostname)
+	token, e := oauthConfig.Exchange(ctx, code, oauth2.AccessTypeOffline)
+	if e != nil {
+		log.WithError(e).Errorf("[CreateMastodonIdentity] failed to exchange access token for state %s and code %s. oauthConfig=%+v", state, code, *oauthConfig)
+		err = WrapCaliopenErrf(e, NotFoundCaliopenErr, "[CreateMastodonIdentity] failed to retrieve access token for state %s", state)
+		return
+	}
+
+	// retrieve user profile from mastodon API
+	mastodonClient := mastodon.NewClient(&mastodon.Config{
+		Server:       mastodonProvider.Infos["address"],
+		ClientID:     mastodonProvider.Infos["client_id"],
+		ClientSecret: mastodonProvider.Infos["client_secret"],
+		AccessToken:  token.AccessToken,
+	})
+
+	userAcct, acctErr := mastodonClient.GetAccountCurrentUser(ctx)
+	if acctErr != nil {
+		log.WithError(acctErr)
+		err = WrapCaliopenErrf(acctErr, FailDependencyCaliopenErr, "[CreateMastodonIdentity] failed to retrieve mastodon user account")
+		return
+	}
+
+	// build user identity
+	// 1. check if this user_identity already exists
+	mastodonIdentifier := userAcct.Username + "@" + mastodonProvider.Instance
+	foundIdentities, e := rest.store.LookupIdentityByIdentifier(mastodonIdentifier, MastodonProtocol)
+	if e != nil {
+		log.WithError(e).Errorf("[CreateMastodonIdentity] failed to lookup mastodon identity in store : %s", userAcct.Acct)
+		err = WrapCaliopenErrf(e, DbCaliopenErr, "[CreateMastodonIdentity] failed to lookup in store if identity already exists. Aborting")
+		return
+	}
+	foundCount := len(foundIdentities)
+	switch foundCount {
+	case 0:
+		userIdentity := new(UserIdentity)
+		userID := UUID(uuid.FromStringOrNil(oauthCache.UserId))
+		userIdentity.MarshallNew(userID)
+		userIdentity.Protocol = MastodonProtocol
+		userIdentity.Type = RemoteIdentity
+		userIdentity.DisplayName = userAcct.DisplayName
+		userIdentity.Identifier = mastodonIdentifier
+		userIdentity.Credentials = &Credentials{
+			users.CRED_ACCESS_TOKEN: token.AccessToken,
+			users.CRED_TOKEN_EXPIRY: token.Expiry.Format(time.RFC3339),
+			users.CRED_TOKEN_TYPE:   token.TokenType,
+		}
+		userIdentity.Infos = map[string]string{
+			"provider":    "mastodon",
+			"authtype":    Oauth2,
+			"mastodon_id": string(userAcct.ID),
+			"url":         userAcct.URL,
+			"avatar":      userAcct.Avatar,
+		}
+
+		// save identity
+		e := rest.CreateUserIdentity(userIdentity)
+		if e != nil {
+			log.WithError(e).Errorf("[CreateMastodonIdentity] failed to create user identity : userIdentity=%+v", *userIdentity)
+			err = WrapCaliopenErr(e, FailDependencyCaliopenErr, "[CreateMastodonIdentity] failed to create user identity")
+			return
+		}
+		remoteId = userIdentity.Id.String()
+	case 1:
+		// this identity already exists,
+		// WHAT TO DO ?? -> stop here or continue ?
+		// checking if it belongs to this user and, if ok, just updating display name
+		// but not tokens
+		storedIdentity, e := rest.RetrieveUserIdentity(foundIdentities[0][0], foundIdentities[0][1], false)
+		if e != nil || storedIdentity == nil {
+			log.WithError(e).Errorf("[CreateMastodonIdentity] failed to retrieve user identity found for account %s: foundIdentities=%+v", mastodonIdentifier, foundIdentities)
+			err = WrapCaliopenErrf(e, DbCaliopenErr, "[CreateMastodonIdentity] failed to retrieve user identity found for account %s", mastodonIdentifier)
+			return
+		}
+		storedIdentity.DisplayName = userAcct.DisplayName
+		modifiedFields := map[string]interface{}{
+			"DisplayName": userAcct.DisplayName,
+		}
+		if e := rest.store.UpdateUserIdentity(storedIdentity, modifiedFields); e != nil {
+			log.WithError(e).Errorf("[CreateMastodonIdentity] failed to update user identity in db : identity=%+v, fields=%+v", *storedIdentity, modifiedFields)
+			err = WrapCaliopenErrf(e, FailDependencyCaliopenErr, "[CreateMastodonIdentity] failed to update user identity in db")
+			return
+		}
+		remoteId = storedIdentity.Id.String()
+		return
+	default:
+		log.Errorf("[CreateMastodonIdentity] inconsistency in store : more than one identity found with name <%s>. foundIdentities=%+v", mastodonIdentifier, foundIdentities)
+		err = NewCaliopenErrf(FailDependencyCaliopenErr, "[CreateMastodonIdentity] inconsistency in store : more than one identity found with name <%s>", mastodonIdentifier)
 		return
 	}
 	return

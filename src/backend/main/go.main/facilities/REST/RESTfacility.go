@@ -46,9 +46,10 @@ type (
 		IsRemoteIdentity(userId, remoteId string) bool
 		//providers
 		RetrieveProvidersList() (providers []Provider, err error)
-		GetProviderOauthFor(userID, provider string) (Provider, CaliopenError)
+		GetProviderOauthFor(userID, provider, instance string) (Provider, CaliopenError)
 		CreateTwitterIdentity(requestToken, verifier string) (remoteId string, err CaliopenError)
 		CreateGmailIdentity(state, code string) (remoteId string, err CaliopenError)
+		CreateMastodonIdentity(state, code string) (remoteId string, err CaliopenError)
 		//discussions
 		GetDiscussionsList(user *UserInfo, ILrange, PIrange [2]int8, limit, offset int) ([]Discussion, int, error)
 		DiscussionMetadata(user *UserInfo, discussionId string) (Discussion, error)
