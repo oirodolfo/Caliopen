@@ -22,6 +22,7 @@ type PollerConfig struct {
 const (
 	imapWorker      = "imap"
 	twitterWorker   = "twitter"
+	mastodonWorker  = "mastodon"
 	noPendingJobErr = "no pending job"
 )
 

@@ -85,6 +85,8 @@ func buildSyncJob(entry cacheEntry) (Job, error) {
 		job.Worker = imapWorker
 	case "twitter":
 		job.Worker = twitterWorker
+	case "mastodon":
+		job.Worker = mastodonWorker
 	default:
 		return Job{}, fmt.Errorf("unhandled remote protocol : %s", entry.remoteProtocol)
 	}

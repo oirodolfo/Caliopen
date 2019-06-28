@@ -4,6 +4,7 @@ remote_protocols:                               # which kind of remote protocols
   - email
   - imap
   - twitter
+  - mastodon
 #storage facility
 store_name: cassandra                           # backend for remote identities data
 store_settings:
