@@ -19,6 +19,7 @@ type MqHandler struct {
 	NatsSubIdentities *nats.Subscription
 	NatsSubImap       *nats.Subscription
 	NatsSubTwitter    *nats.Subscription
+	NatsSubMastodon   *nats.Subscription
 }
 
 const defaultInterval = "15"
@@ -54,6 +55,14 @@ func InitMqHandler() (*MqHandler, error) {
 		return handler, errors.New("[initMqHandler] failed to init NATS subscription")
 	}
 	handler.NatsSubTwitter = sub
+
+	sub, err = handler.NatsConn.QueueSubscribe(poller.Config.NatsTopics["mastodon"], poller.Config.NatsQueue, handler.natsMastodonHandler)
+	if err != nil {
+		log.WithError(err).Warnf("[initMqHandler] : initialization of NATS subscription failed for topic mastodon")
+		handler.NatsConn = nil
+		return handler, errors.New("[initMqHandler] failed to init NATS subscription")
+	}
+	handler.NatsSubMastodon = sub
 	return handler, nil
 }
 
@@ -214,9 +223,62 @@ func (mqh *MqHandler) natsTwitterHandler(msg *nats.Msg) {
 	}
 }
 
+func (mqh *MqHandler) natsMastodonHandler(msg *nats.Msg) {
+	var req WorkerRequest
+	err := json.Unmarshal(msg.Data, &req)
+	if err != nil {
+		log.WithError(err).Warn("[natsMastodonHandler] unable to unmarshal nats request")
+		e := mqh.NatsConn.Publish(msg.Reply, []byte(`{"order":"error : unable to unmarshal request"}`))
+		if e != nil {
+			log.WithError(e).Warn("[natsMastodonHandler] failed to publish reply on nats")
+		}
+	}
+
+	switch req.Order.Order {
+	case "need_job":
+		job, err := poller.jobs.ConsumePendingJobFor(mastodonWorker)
+		if err != nil {
+			if err.Error() == noPendingJobErr {
+				e := mqh.NatsConn.Publish(msg.Reply, []byte(`{"order":"no pending job"}`))
+				if e != nil {
+					log.WithError(e).Warn("[natsMastodonHandler] failed to publish reply on nats")
+				}
+			} else {
+				log.WithError(err).Warn("[natsMastodonHandler] failed to get a job for worker")
+				e := mqh.NatsConn.Publish(msg.Reply, []byte(`{"order":"error"}`))
+				if e != nil {
+					log.WithError(e).Warn("[natsMastodonHandler] failed to publish reply on nats")
+				}
+			}
+		} else {
+			log.Debugf("[natsMastodonHandler] replying to %s with job : %+v", msg.Reply, job)
+			reply, err := json.Marshal(job.Order)
+			if err != nil {
+				log.WithError(err).Warnf("[natsMastodonHandler] failed to json Marshal job : %+v", job)
+				e := mqh.NatsConn.Publish(msg.Reply, []byte(`{"order":"error"}`))
+				if e != nil {
+					log.WithError(e).Warn("[natsMastodonHandler] failed to publish reply on nats")
+				}
+			}
+			// forwarding job to worker
+			err = mqh.NatsConn.Publish(msg.Reply, reply)
+			if err != nil {
+				log.WithError(err).Warn("[natsMastodonHandler] failed to publish reply on nats")
+			}
+		}
+	default:
+		log.Warnf("[natsMastodonHandler] received unknown order : %s", req.Order)
+		e := mqh.NatsConn.Publish(msg.Reply, []byte(`{"order":"error : unknown order"}`))
+		if e != nil {
+			log.WithError(e).Warn("[natsMastodonHandler] failed to publish reply on nats")
+		}
+	}
+}
+
 func (mqh *MqHandler) Stop() {
 	mqh.NatsSubIdentities.Unsubscribe()
 	mqh.NatsSubImap.Unsubscribe()
 	mqh.NatsSubTwitter.Unsubscribe()
+	mqh.NatsSubMastodon.Unsubscribe()
 	mqh.NatsConn.Close()
 }
