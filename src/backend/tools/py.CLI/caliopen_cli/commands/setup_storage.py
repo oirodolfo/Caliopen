@@ -19,6 +19,7 @@ def setup_storage(settings=None):
     from caliopen_main.common.objects.tag import ResourceTag
     from caliopen_main.device.core import Device
     from caliopen_main.notification.core import Notification, NotificationTtl
+    from caliopen_main.protocol.core import Provider
 
     from cassandra.cqlengine.management import sync_table, \
         create_keyspace_simple

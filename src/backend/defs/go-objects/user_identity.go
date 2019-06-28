@@ -141,7 +141,7 @@ func (ui *UserIdentity) SetDefaults() {
 			"uidvalidity":  "",   // uidvalidity to invalidate data if needed (see RFC4549#section-4.1)
 			"pollinterval": "15", // how often remote account should be polled, in minutes.
 		}
-	case TwitterProtocol:
+	case TwitterProtocol, MastodonProtocol:
 		defaults = map[string]string{
 			"lastseendm":   "",
 			"lastsync":     "",  // RFC3339 date string

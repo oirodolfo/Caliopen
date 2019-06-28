@@ -22,6 +22,7 @@ type APIStorage interface {
 	TagsStorage
 	UserNameStorage
 	UserStorage
+	ProviderStorage
 	GetSession() *gocql.Session
 }
 

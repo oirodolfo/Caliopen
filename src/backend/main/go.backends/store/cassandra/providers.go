@@ -9,9 +9,13 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gocassa/gocassa"
 	"gopkg.in/oleiade/reflections.v1"
+	"time"
 )
 
 func (cb *CassandraBackend) CreateProvider(provider *Provider) CaliopenError {
+	if provider.DateInsert.IsZero() {
+		provider.DateInsert = time.Now()
+	}
 	table := cb.IKeyspace.Table("provider", &Provider{},
 		gocassa.Keys{
 			PartitionKeys: []string{"name", "instance"},
@@ -70,7 +74,7 @@ func (cb *CassandraBackend) UpdateProvider(provider *Provider, fields map[string
 func (cb *CassandraBackend) DeleteProvider(provider *Provider) CaliopenError {
 	err := cb.SessionQuery(`DELETE FROM provider WHERE name = ? AND instance = ?`, provider.Name, provider.Instance).Exec()
 	if err != nil {
-		log.WithError(err).Errorf("[CassandraBackend] UpdateProvider failed to DELETE provider %+v", provider)
+		log.WithError(err).Errorf("[CassandraBackend] DeleteProvider failed for %+v", provider)
 		return WrapCaliopenErr(err, DbCaliopenErr, "")
 
 	}
