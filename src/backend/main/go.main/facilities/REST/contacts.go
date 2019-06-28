@@ -372,7 +372,7 @@ func addIdentityToContact(storeContact backends.ContactStorage, indexContact bac
 		si.Type = MastodonProtocol
 		si.Name = identity.Identifier
 		si.Infos = map[string]string{
-			"mastodon_id":  identity.Infos["twitterid"],
+			"mastodon_id":  identity.Infos["mastodon_id"],
 			"display_name": identity.DisplayName,
 		}
 		if contact.Identities == nil {
