@@ -19,3 +19,4 @@ nats_topics:                                 # NATS topics to work with
   id_cache: idCache                          # receiving orders to update poller's cache
   imap: imapJobs                             # receiving requests for IMAP jobs
   twitter: twitterJobs                       # receiving requests for Twitter jobs
+  mastodon: mastodonJobs                     # receiving requests for Mastodon jobs
