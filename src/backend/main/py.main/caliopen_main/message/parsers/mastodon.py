@@ -29,9 +29,9 @@ class MastodonStatus(object):
         self.dm = json.loads(self.raw)
         self.recipients = []
         for m in self.dm["mentions"]:
-            self.recipients.append(MastodonParticipant("to", m['url']))
+            self.recipients.append(MastodonParticipant("To", m['url']))
 
-        self.sender = MastodonParticipant('from', self.dm['account']['url'])
+        self.sender = MastodonParticipant('From', self.dm['account']['url'])
         self.protocol = self.message_protocol
         self.is_unread = True  # TODO: handle DM sent by user
         #                                     if broker keeps them when fetching
