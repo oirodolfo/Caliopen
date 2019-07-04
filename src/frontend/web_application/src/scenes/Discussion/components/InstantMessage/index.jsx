@@ -106,17 +106,17 @@ class InstantMessage extends PureComponent {
     const { message } = this.props;
 
     return message.body_is_plain ? (
-      <TextBlock
-        nowrap={false}
-        className="m-instant-message__content"
-        dangerouslySetInnerHTML={{ __html: message.body }}
-      />
-    ) : (
       <TextBlock className="m-instant-message__content" nowrap={false}>
         <Linkify>
           {message.body}
         </Linkify>
       </TextBlock>
+    ) : (
+      <TextBlock
+        nowrap={false}
+        className="m-instant-message__content"
+        dangerouslySetInnerHTML={{ __html: message.body }}
+      />
     );
   }
 
