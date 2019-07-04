@@ -4,10 +4,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 from caliopen_main.message.parameters import NewInboundMessage
-from caliopen_main.message.parsers.twitter import TwitterDM
+from caliopen_main.message.parsers.mastodon import MastodonStatus
 from caliopen_main.discussion.core import Discussion
 from caliopen_main.participant.store import HashLookup
-from caliopen_main.common.helpers.normalize import clean_twitter_address
+from caliopen_main.common.helpers.normalize import clean_mastodon_address
 
 from ..features import marshal_features
 from .base import BaseQualifier
@@ -15,8 +15,8 @@ from .base import BaseQualifier
 log = logging.getLogger(__name__)
 
 
-class UserTwitterQualifier(BaseQualifier):
-    """Process a Twitter direct message to unmarshal it in our stack."""
+class UserMastodonQualifier(BaseQualifier):
+    """Process a Mastodon direct message to unmarshal it in our stack."""
 
     _lookups = {
         'hash': HashLookup,
@@ -37,27 +37,26 @@ class UserTwitterQualifier(BaseQualifier):
 
         @param raw: a RawMessage object
             which should be a json conforming to
-            https://developer.twitter.com/en/docs/direct-messages/\
-            sending-and-receiving/guides/message-create-object
+            https://docs.joinmastodon.org/api/entities/#status
         @rtype: NewMessage
         """
-        tweet = TwitterDM(raw.raw_data)
+        toot = MastodonStatus(raw.raw_data)
         new_message = NewInboundMessage()
         new_message.raw_msg_id = raw.raw_msg_id
-        new_message.body_plain = tweet.body_plain
-        new_message.date = tweet.date
-        new_message.protocol = tweet.protocol
+        new_message.body_html = toot.body_html
+        new_message.date = toot.date
+        new_message.protocol = toot.protocol
         new_message.is_unread = True
         new_message.is_draft = False
         new_message.is_answered = False
         new_message.is_received = True
         new_message.importance_level = 0  # XXX tofix on parser
-        new_message.external_references = tweet.external_references
+        new_message.external_references = toot.external_references
 
         participants = []
-        for p in tweet.participants:
-            p.address = clean_twitter_address(p.address)
-            participant, contact = self.get_participant(tweet, p)
+        for p in toot.participants:
+            p.address = p.address
+            participant, contact = self.get_participant(toot, p)
             new_message.participants.append(participant)
             participants.append((participant, contact))
 
