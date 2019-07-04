@@ -12,10 +12,13 @@ import (
 	"strconv"
 	"time"
 
+	"context"
 	broker "github.com/CaliOpen/Caliopen/src/backend/brokers/go.mastodon"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
+	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
 	log "github.com/Sirupsen/logrus"
 	"github.com/mattn/go-mastodon"
+	"strings"
 )
 
 type (
@@ -30,15 +33,11 @@ type (
 	}
 
 	MastodonAccount struct {
-		acct        string
 		displayName string
-		token       string
 		mastodonID  string
-		secret      string
 		remoteID    UUID
-		url         string
-		username    string
 		userID      UUID
+		username    string
 	}
 )
 
@@ -84,12 +83,24 @@ func NewAccountHandler(userID, remoteID string, worker Worker) (accountHandler *
 		err = fmt.Errorf("[MastodonAccount]NewAccountHandler failed to retrieve credentials for remote identity <%s> (user <%s>)", remoteID, userID)
 		return
 	}
+	userAcct := strings.Split(remote.Identifier, "@")
+	if len(userAcct) != 2 {
+		err = fmt.Errorf("[MastodonAccount]NewAccountHandler failed to split user account identifier : <%s>", remote.Identifier)
+		return
+	}
+	provider, e := accountHandler.broker.Store.RetrieveProvider("mastodon", userAcct[1])
+	if e != nil {
+		log.WithError(e)
+		err = fmt.Errorf("[MastodonAccount]NewAccountHandler failed to retrieve provider %s from db : %s", userAcct[1], e)
+		return
+	}
+
 	accountHandler.userAccount = &MastodonAccount{
-		token:    (*remote.Credentials)["token"],
-		secret:   (*remote.Credentials)["secret"],
-		userID:   remote.UserId,
-		remoteID: remote.Id,
-		acct:     remote.Identifier,
+		displayName: remote.DisplayName,
+		mastodonID:  remote.Infos["mastodon_id"],
+		remoteID:    remote.Id,
+		userID:      remote.UserId,
+		username:    userAcct[0],
 	}
 
 	if lastseen, ok := remote.Infos[lastSeenInfosKey]; ok {
@@ -98,17 +109,13 @@ func NewAccountHandler(userID, remoteID string, worker Worker) (accountHandler *
 		accountHandler.lastDMseen = "0"
 	}
 
-	//authConf := oauth1.NewConfig(worker.Conf.MastodonAppKey, worker.Conf.MastodonAppSecret)
-	//token := oauth1.NewToken(accountHandler.userAccount.token, accountHandler.userAccount.secret)
-	//httpClient := authConf.Client(oauth1.NoContext, token)
-	config := mastodon.Config{}
-	if accountHandler.mastodonClient = mastodon.NewClient(&config); accountHandler.mastodonClient == nil {
-		return nil, errors.New("[NewWorker] mastodon api failed to create http client")
-	}
-	//var mastodonID int64
-	//var screenName string
+	accountHandler.mastodonClient = mastodon.NewClient(&mastodon.Config{
+		AccessToken:  (*remote.Credentials)["oauth2accesstoken"],
+		ClientID:     provider.Infos["client_id"],
+		ClientSecret: provider.Infos["client_secret"],
+		Server:       provider.Infos["address"],
+	})
 
-	// try to cache account's ID and screenName
 	return
 }
 
@@ -197,10 +204,6 @@ func (worker *AccountHandler) PollDM() {
 	// and to remove syncing state before leaving
 	defer func() {
 		if worker.broker != nil {
-			delete(accountInfos, lastErrorKey)
-			delete(accountInfos, errorsCountKey)
-			delete(accountInfos, dateFirstErrorKey)
-			delete(accountInfos, dateLastErrorKey)
 			delete(accountInfos, syncingKey)
 			e := worker.broker.Store.UpdateRemoteInfosMap(worker.userAccount.userID.String(), worker.userAccount.remoteID.String(), accountInfos)
 			if e != nil {
@@ -215,7 +218,67 @@ func (worker *AccountHandler) PollDM() {
 	}()
 
 	// retrieve DM list from mastodon API
+	// 40 statuses by 40 statuses in reverse order
+	// until lastSeenDM or end of feed
+	pg := &mastodon.Pagination{}
+	statuses := make([]*mastodon.Status, 0, 40)
+	var getErr error
+	for {
+		pg.Limit = 40
+		pg.SinceID = ""
+		pg.MinID = ""
+		page, e := worker.mastodonClient.GetTimelineDirect(context.Background(), pg) // GetTimelineDirect will update pg.maxID
+		if e != nil {
+			getErr = e
+			break
+		}
+		if len(page) == 0 {
+			break
+		}
+		statuses = append(statuses, page...)
 
+		if accountInfos[lastSeenInfosKey] != "" && broker.IDgreaterOrEqual(accountInfos[lastSeenInfosKey], string(pg.MaxID)) {
+			break
+		}
+	}
+
+	if getErr != nil {
+		log.WithError(getErr)
+		e := worker.saveErrorState(accountInfos, getErr.Error())
+		if e != nil {
+			log.WithError(e).Warnf("[AccountHandler %s] PollDM failed to update sync state in db", worker.userAccount.remoteID.String())
+		}
+		return
+	}
+
+	// inject DM in Caliopen, reverse order
+	batch := Notifications.NewBatch("mastodon_worker")
+	for i := len(statuses) - 1; i >= 0; i-- {
+		if broker.IDgreaterOrEqual(string(statuses[i].ID), accountInfos[lastSeenInfosKey]) &&
+			string(statuses[i].ID) != accountInfos[lastSeenInfosKey] {
+			processErr := worker.broker.ProcessInDM(worker.userAccount.userID, worker.userAccount.remoteID, statuses[i], true, batch)
+			if processErr != nil {
+				log.WithError(processErr).Warnf("[AccountHandler %s] ProcessInDM failed for status: %+v", worker.userAccount.remoteID.String(), statuses[i])
+			} else {
+				accountInfos[lastSeenInfosKey] = string(statuses[i].ID)
+			}
+		}
+	}
+
+	accountInfos[lastSyncInfosKey] = time.Now().Format(time.RFC3339)
+
+	// sync terminated without error, cleanup userIdentity infos map
+	delete(accountInfos, lastErrorKey)
+	delete(accountInfos, errorsCountKey)
+	delete(accountInfos, dateFirstErrorKey)
+	delete(accountInfos, dateLastErrorKey)
+	err = worker.broker.Store.UpdateRemoteInfosMap(worker.userAccount.userID.String(), worker.userAccount.remoteID.String(), accountInfos)
+	if err != nil {
+		log.WithError(err).Warnf("[AccountHandler %s] ProcessInDM failed to update InfosMap at end of process", worker.userAccount.remoteID.String())
+	}
+
+	// notify new messages
+	batch.Save(worker.broker.Notifier, "", LongLived)
 }
 
 func (worker *AccountHandler) dmNotSeen(status mastodon.Status) bool {
@@ -339,7 +402,7 @@ func (worker *AccountHandler) saveErrorState(infos map[string]string, err string
 		}
 	}
 
-	// udpate UserIdentity in db
+	// update UserIdentity in db
 	return worker.broker.Store.UpdateRemoteInfosMap(worker.userAccount.userID.String(), worker.userAccount.remoteID.String(), infos)
 
 }

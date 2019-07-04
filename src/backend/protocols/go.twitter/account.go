@@ -218,6 +218,7 @@ func (worker *AccountHandler) PollDM() {
 	// and to remove syncing state before leaving
 	defer func() {
 		if worker.broker != nil {
+			// TODO : remove deletion of errors key from defer func ? (see mastodon broker)
 			delete(accountInfos, lastErrorKey)
 			delete(accountInfos, errorsCountKey)
 			delete(accountInfos, dateFirstErrorKey)
