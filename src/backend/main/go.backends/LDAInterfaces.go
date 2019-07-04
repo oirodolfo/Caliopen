@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-//LDA only deals with email
+//Local Delivery Agent storage interface
 type LDAStore interface {
 	Close()
 	RetrieveMessage(user_id, msg_id string) (msg *Message, err error)
@@ -36,6 +36,8 @@ type LDAStore interface {
 	UpdateRemoteInfosMap(userId, remoteId string, infos map[string]string) error
 	RetrieveRemoteInfosMap(userId, remoteId string) (infos map[string]string, err error)
 	TimestampRemoteLastCheck(userId, remoteId string, time ...time.Time) error
+
+	RetrieveProvider(name, instance string) (*Provider, CaliopenError)
 }
 
 type LDAIndex interface {
