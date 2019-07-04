@@ -7,6 +7,9 @@ from email.utils import parseaddr
 
 log = logging.getLogger(__name__)
 
+mastodon_url_regex = '^https:\/\/(.*)\/@(.*)'
+mastodon_url_legacy_regex = '^https:\/\/(.*)\/users\/(.*)'
+
 
 def clean_email_address(addr):
     """Clean an email address for user resolve."""
@@ -40,3 +43,24 @@ def clean_email_address(addr):
 
 def clean_twitter_address(addr):
     return addr.strip('@').lower()
+
+
+def clean_mastodon_address(addr):
+    return addr.strip('@').lower().split('@')
+
+
+def parse_mastodon_url(url):
+    """extract username and domain from a mastodon account url
+    in the format https://instance.tld/@username
+
+    :return: tuple (server, username)
+    """
+
+    matches = re.findall(mastodon_url_regex, url)
+    if len(matches) != 1 or len(matches[0]) != 2:
+        # try legacy fallback
+        matches = re.findall(mastodon_url_legacy_regex, url)
+        if len(matches) != 1 or len(matches[0]) != 2:
+            raise SyntaxError
+
+    return matches[0]
