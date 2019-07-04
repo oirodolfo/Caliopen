@@ -102,6 +102,24 @@ class InstantMessage extends PureComponent {
       this.getRecipientsLabels(getRecipients(message));
   }
 
+  renderBody() {
+    const { message } = this.props;
+
+    return message.body_is_plain ? (
+      <TextBlock
+        nowrap={false}
+        className="m-instant-message__content"
+        dangerouslySetInnerHTML={{ __html: message.body }}
+      />
+    ) : (
+      <TextBlock className="m-instant-message__content" nowrap={false}>
+        <Linkify>
+          {message.body}
+        </Linkify>
+      </TextBlock>
+    );
+  }
+
   renderActions() {
     const {
       i18n,
@@ -191,13 +209,7 @@ class InstantMessage extends PureComponent {
               <LockedMessage encryptionStatus={encryptionStatus} />
             )
             :
-            (
-              <TextBlock className="m-instant-message__content" nowrap={false}>
-                <Linkify>
-                  {message.body}
-                </Linkify>
-              </TextBlock>
-            )
+            this.renderBody()
         }
       </article>
     );
