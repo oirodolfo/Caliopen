@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	. "github.com/CaliOpen/Caliopen/src/backend/defs/go-objects"
+	"github.com/CaliOpen/Caliopen/src/backend/main/go.main/facilities/Notifications"
 	log "github.com/Sirupsen/logrus"
 	"github.com/mattn/go-mastodon"
 	"github.com/satori/go.uuid"
@@ -28,7 +29,7 @@ const (
 //      sending natsOrderRaw for other stack components
 //      sending new message notification if everything went good
 //      updating remote identity state in db
-func (broker *MastodonBroker) ProcessInDM(userID, remoteID UUID, dm *mastodon.Status, rawOnly bool) error {
+func (broker *MastodonBroker) ProcessInDM(userID, remoteID UUID, dm *mastodon.Status, rawOnly bool, batch *Notifications.BatchNotification) error {
 
 	rawID, err := broker.SaveRawDM(dm, userID)
 	if err != nil {
@@ -64,15 +65,19 @@ func (broker *MastodonBroker) ProcessInDM(userID, remoteID UUID, dm *mastodon.St
 	// nats delivery OK, notify user
 	notif := Notification{
 		Emitter: "mastodonBroker",
-		Type:    EventNotif,
+		Type:    NewMessageNotif,
 		TTLcode: LongLived,
 		User: &User{
 			UserId: userID,
 		},
 		NotifId: UUID(uuid.NewV1()),
-		Body:    `{"dmReceived": "` + (*nats_ack)["message_id"].(string) + `"}`,
+		Body:    `{"message_id": "` + (*nats_ack)["message_id"].(string) + `", "discussion_id":"` + (*nats_ack)["discussion_id"].(string) + `"}`,
 	}
-	go broker.Notifier.ByNotifQueue(&notif)
+	if batch != nil {
+		batch.Add(notif)
+	} else {
+		go broker.Notifier.ByNotifQueue(&notif)
+	}
 	// update raw_message table to set raw_message.delivered=true
 	go broker.Store.SetDeliveredStatus(rawID.String(), true)
 	return nil

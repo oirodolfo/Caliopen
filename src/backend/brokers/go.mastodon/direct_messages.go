@@ -15,10 +15,6 @@ import (
 	"time"
 )
 
-const (
-	DirectMessageType = "message_create"
-)
-
 // SaveRawDM marshal DM to json and save it as a raw message object in store
 func (broker *MastodonBroker) SaveRawDM(dm *mastodon.Status, userId UUID) (rawMessageId UUID, err error) {
 
@@ -106,4 +102,16 @@ func MarshalDM(msg *Message) (dm *mastodon.Status, err error) {
 
 	dm = &mastodon.Status{}
 	return
+}
+
+// IDgreaterThan compares two mastodon IDs and returns true if first ID is greater or equal to second one
+// string IDs a representation of integers, but what is faster to do ? strconv to int , or len + lexically sorting ?
+func IDgreaterOrEqual(first, second string) bool {
+	if len(first) > len(second) {
+		return true
+	}
+	if len(first) == len(second) {
+		return first >= second
+	}
+	return false
 }
