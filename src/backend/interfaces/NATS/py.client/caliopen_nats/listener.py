@@ -52,6 +52,23 @@ def inbound_twitter_handler(config):
     future.result()
 
 @tornado.gen.coroutine
+def inbound_mastodon_handler(config):
+    """Inbound mastodonDM NATS handler"""
+    client = Nats()
+    server = 'nats://{}:{}'.format(config['host'], config['port'])
+    servers = [server]
+
+    opts = {"servers": servers}
+    yield client.connect(**opts)
+
+    # create and register subscriber(s)
+    inbound_mastodon_sub = subscribers.InboundMastodon(client)
+    future = client.subscribe("inboundMastodon", "Mastodonqueue",
+                              inbound_mastodon_sub.handler)
+    log.info("nats subscription started for inboundMastodon")
+    future.result()
+
+@tornado.gen.coroutine
 def contact_handler(config):
     """NATS handler for contact update events."""
     client = Nats()
@@ -102,6 +119,7 @@ if __name__ == '__main__':
     connect_storage()
     inbound_smtp_handler(Configuration('global').get('message_queue'))
     inbound_twitter_handler(Configuration('global').get('message_queue'))
+    inbound_mastodon_handler(Configuration('global').get('message_queue'))
     contact_handler(Configuration('global').get('message_queue'))
     key_handler(Configuration('global').get('message_queue'))
     loop_instance = tornado.ioloop.IOLoop.instance()

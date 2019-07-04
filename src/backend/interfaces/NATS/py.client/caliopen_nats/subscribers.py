@@ -11,7 +11,8 @@ from caliopen_storage.exception import DuplicateObject
 from caliopen_main.user.core import User, UserIdentity
 from caliopen_main.contact.objects import Contact
 
-from caliopen_nats.delivery import UserMailDelivery, UserTwitterDMDelivery
+from caliopen_nats.delivery import UserMailDelivery, UserTwitterDelivery, \
+    UserMastodonDelivery
 from caliopen_pi.qualifiers import ContactMessageQualifier
 from caliopen_pgp.keys import ContactPublicKeyManager
 from caliopen_main.common.core import PublicKey
@@ -91,7 +92,52 @@ class InboundTwitter(BaseHandler):
         try:
             user = User.get(payload['user_id'])
             identity = UserIdentity.get(user, payload['identity_id'])
-            deliver = UserTwitterDMDelivery(user, identity)
+            deliver = UserTwitterDelivery(user, identity)
+            new_message = deliver.process_raw(payload['message_id'])
+            nats_success['message_id'] = str(new_message.message_id)
+            nats_success['discussion_id'] = str(new_message.discussion_id)
+            self.natsConn.publish(msg.reply, json.dumps(nats_success))
+        except DuplicateObject:
+            log.info("Message already imported : {}".format(payload))
+            nats_success['message_id'] = str(payload['message_id'])
+            nats_success['discussion_id'] = ""  # message has not been parsed
+            nats_success['message'] = 'raw message already imported'
+            self.natsConn.publish(msg.reply, json.dumps(nats_success))
+        except Exception as exc:
+            # TODO: handle abort exception and report it as special case
+            exc_info = sys.exc_info()
+            log.error("deliver process failed for raw {}: {}".
+                      format(payload, traceback.print_exception(*exc_info)))
+            nats_error['error'] = str(exc.message)
+            self.natsConn.publish(msg.reply, json.dumps(nats_error))
+            return exc
+
+    def handler(self, msg):
+        """Handle an process_raw nats messages."""
+        payload = json.loads(msg.data)
+        log.info('Get payload order {}'.format(payload['order']))
+        if payload['order'] == "process_raw":
+            self.process_raw(msg, payload)
+        else:
+            log.warn('Unhandled payload type {}'.format(payload['order']))
+
+
+class InboundMastodon(BaseHandler):
+    """Inbound MastodonDM class handler."""
+
+    def process_raw(self, msg, payload):
+        """Process an inbound raw message."""
+        nats_error = {
+            'error': '',
+            'message': 'inbound mastodon message process failed'
+        }
+        nats_success = {
+            'message': 'OK : inbound mastodon message proceeded'
+        }
+        try:
+            user = User.get(payload['user_id'])
+            identity = UserIdentity.get(user, payload['identity_id'])
+            deliver = UserMastodonDelivery(user, identity)
             new_message = deliver.process_raw(payload['message_id'])
             nats_success['message_id'] = str(new_message.message_id)
             nats_success['discussion_id'] = str(new_message.discussion_id)
