@@ -12,6 +12,7 @@ import (
 	"github.com/mattn/go-mastodon"
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
+	"strings"
 	"time"
 )
 
@@ -97,10 +98,20 @@ func UnmarshalDM(dm *mastodon.Status, userId UUID) (message *Message, err error)
 	return nil, errors.New("not implemented")
 }
 
-// MarshalDM builds a Mastodon status with visibility=direct from a Caliopen message
-func MarshalDM(msg *Message) (dm *mastodon.Status, err error) {
-
-	dm = &mastodon.Status{}
+// MarshalDM builds a Mastodon toot with visibility=direct from a Caliopen message
+func MarshalDM(msg *Message) (toot *mastodon.Toot, err error) {
+	var body strings.Builder
+	for _, participant := range msg.Participants {
+		if participant.Type != "From" {
+			body.WriteString("@" + participant.Address + " ")
+		}
+	}
+	body.WriteString(msg.Body_plain)
+	toot = &mastodon.Toot{
+		Status:      body.String(),
+		InReplyToID: mastodon.ID(msg.External_references.Parent_id),
+		Visibility:  "direct",
+	}
 	return
 }
 

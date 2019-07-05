@@ -34,7 +34,7 @@ func (b *MastodonBroker) ProcessOutDM(order BrokerOrder, worker chan *DMpayload)
 		replyError(errors.New("message is not a draft"), worker)
 		return
 	}
-	dmPayload.DM, err = MarshalDM(m)
+	dmPayload.Toot, err = MarshalDM(m)
 	if err != nil {
 		replyError(err, worker)
 		return

@@ -43,7 +43,7 @@ type (
 	}
 
 	DMpayload struct {
-		DM       *mastodon.Status
+		Toot     *mastodon.Toot
 		Err      error
 		Response chan MastodonDeliveryAck
 	}
