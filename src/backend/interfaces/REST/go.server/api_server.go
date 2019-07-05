@@ -82,15 +82,16 @@ type (
 	}
 
 	NatsConfig struct {
-		Url              string `mapstructure:"url"`
-		NatsQueue        string `mapstructure:"nats_queue"`
-		OutSMTP_topic    string `mapstructure:"outSMTP_topic"`
-		OutIMAP_topic    string `mapstructure:"outIMAP_topic"`
-		OutTWITTER_topic string `mapstructure:"outTWITTER_topic"`
-		Contacts_topic   string `mapstructure:"contacts_topic"`
-		Keys_topic       string `mapstructure:"keys_topic"`
-		Users_topic      string `mapstructure:"users_topic"`
-		IdPoller_topic   string `mapstructure:"idpoller_topic"`
+		Url               string `mapstructure:"url"`
+		NatsQueue         string `mapstructure:"nats_queue"`
+		OutSMTP_topic     string `mapstructure:"outSMTP_topic"`
+		OutIMAP_topic     string `mapstructure:"outIMAP_topic"`
+		OutTWITTER_topic  string `mapstructure:"outTWITTER_topic"`
+		OutMASTODON_topic string `mapstructure:"outMASTODON_topic"`
+		Contacts_topic    string `mapstructure:"contacts_topic"`
+		Keys_topic        string `mapstructure:"keys_topic"`
+		Users_topic       string `mapstructure:"users_topic"`
+		IdPoller_topic    string `mapstructure:"idpoller_topic"`
 	}
 
 	NotifierConfig struct {
@@ -131,15 +132,16 @@ func (server *REST_API) initialize(config APIConfig) error {
 			Db:       config.CacheSettings.Db,
 		},
 		NatsConfig: obj.NatsConfig{
-			Url:              config.NatsConfig.Url,
-			NatsQueue:        config.NatsConfig.NatsQueue,
-			OutSMTP_topic:    config.NatsConfig.OutSMTP_topic,
-			OutIMAP_topic:    config.NatsConfig.OutIMAP_topic,
-			OutTWITTER_topic: config.NatsConfig.OutTWITTER_topic,
-			Contacts_topic:   config.NatsConfig.Contacts_topic,
-			Keys_topic:       config.NatsConfig.Keys_topic,
-			Users_topic:      config.NatsConfig.Users_topic,
-			IdPoller_topic:   config.NatsConfig.IdPoller_topic,
+			Url:               config.NatsConfig.Url,
+			NatsQueue:         config.NatsConfig.NatsQueue,
+			OutSMTP_topic:     config.NatsConfig.OutSMTP_topic,
+			OutIMAP_topic:     config.NatsConfig.OutIMAP_topic,
+			OutTWITTER_topic:  config.NatsConfig.OutTWITTER_topic,
+			OutMASTODON_topic: config.NatsConfig.OutMASTODON_topic,
+			Contacts_topic:    config.NatsConfig.Contacts_topic,
+			Keys_topic:        config.NatsConfig.Keys_topic,
+			Users_topic:       config.NatsConfig.Users_topic,
+			IdPoller_topic:    config.NatsConfig.IdPoller_topic,
 		},
 		NotifierConfig: obj.NotifierConfig{
 			AdminUsername: config.NotifierConfig.AdminUsername,

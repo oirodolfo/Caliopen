@@ -42,15 +42,16 @@ type (
 
 	// NATS
 	NatsConfig struct {
-		Url              string `mapstructure:"url"`
-		NatsQueue        string `mapstructure:"nats_queue"`
-		OutSMTP_topic    string `mapstructure:"outSMTP_topic"`
-		OutIMAP_topic    string `mapstructure:"outIMAP_topic"`
-		OutTWITTER_topic string `mapstructure:"outTWITTER_topic"`
-		Contacts_topic   string `mapstructure:"contacts_topic"`
-		Keys_topic       string `mapstructure:"keys_topic"`
-		Users_topic      string `mapstructure:"users_topic"`
-		IdPoller_topic   string `mapstructure:"idpoller_topic"`
+		Url               string `mapstructure:"url"`
+		NatsQueue         string `mapstructure:"nats_queue"`
+		OutSMTP_topic     string `mapstructure:"outSMTP_topic"`
+		OutIMAP_topic     string `mapstructure:"outIMAP_topic"`
+		OutTWITTER_topic  string `mapstructure:"outTWITTER_topic"`
+		OutMASTODON_topic string `mapstructure:"outMASTODON_topic"`
+		Contacts_topic    string `mapstructure:"contacts_topic"`
+		Keys_topic        string `mapstructure:"keys_topic"`
+		Users_topic       string `mapstructure:"users_topic"`
+		IdPoller_topic    string `mapstructure:"idpoller_topic"`
 	}
 	// Cassandra
 	StoreConfig struct {

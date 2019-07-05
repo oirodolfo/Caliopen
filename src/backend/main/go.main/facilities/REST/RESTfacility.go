@@ -111,12 +111,13 @@ func NewRESTfacility(config CaliopenConfig, nats_conn *nats.Conn) (rest_facility
 	rest_facility = new(RESTfacility)
 	rest_facility.nats_conn = nats_conn
 	rest_facility.natsTopics = map[string]string{
-		Nats_outSMTP_topicKey:    config.NatsConfig.OutSMTP_topic,
-		Nats_outIMAP_topicKey:    config.NatsConfig.OutIMAP_topic,
-		Nats_Contacts_topicKey:   config.NatsConfig.Contacts_topic,
-		Nats_outTwitter_topicKey: config.NatsConfig.OutTWITTER_topic,
-		Nats_Keys_topicKey:       config.NatsConfig.Keys_topic,
-		Nats_IdPoller_topicKey:   config.NatsConfig.IdPoller_topic,
+		Nats_outSMTP_topicKey:     config.NatsConfig.OutSMTP_topic,
+		Nats_outIMAP_topicKey:     config.NatsConfig.OutIMAP_topic,
+		Nats_Contacts_topicKey:    config.NatsConfig.Contacts_topic,
+		Nats_outTwitter_topicKey:  config.NatsConfig.OutTWITTER_topic,
+		Nats_outMastodon_topicKey: config.NatsConfig.OutMASTODON_topic,
+		Nats_Keys_topicKey:        config.NatsConfig.Keys_topic,
+		Nats_IdPoller_topicKey:    config.NatsConfig.IdPoller_topic,
 	}
 	switch config.RESTstoreConfig.BackendName {
 	case "cassandra":

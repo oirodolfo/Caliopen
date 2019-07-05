@@ -36,6 +36,7 @@ ApiConfig:
     outSMTP_topic: outboundSMTP       # topic's name for "send" draft order via SMTP
     outIMAP_topic: outboundIMAP       # topic's name for "send" draft order via remote SMTP+IMAP
     outTWITTER_topic: twitter_dm      # topics's name for "send" draft order via TWITTER
+    outMASTODON_topic: mastodon_dm    # topics's name for "send" draft order via MASTODON
     contacts_topic: contactAction     # topic's name to post messages regarding contacts' events
     keys_topic: keyAction             # topic's name to post messages regarding public key events
     users_topic: userAction           # topic's name to post messages regarding users events
