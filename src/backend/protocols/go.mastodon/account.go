@@ -302,13 +302,22 @@ func (worker *AccountHandler) SendDM(order BrokerOrder) error {
 		return errors.New("[SendDM] broker timeout")
 	}
 
-	// retrieve recipient's mastodon ID from DM's screenName
-
 	// deliver DM through Mastodon API
+
+	status, errResponse := worker.mastodonClient.PostStatus(context.Background(), brokerMessage.Toot)
+	if errResponse != nil {
+		brokerMessage.Response <- broker.MastodonDeliveryAck{
+			Payload:  status,
+			Err:      true,
+			Response: errResponse.Error(),
+		}
+		return errResponse
+	}
 
 	// give back Mastodon's reply to broker for it finishes its job
 	brokerMessage.Response <- broker.MastodonDeliveryAck{
-		//Payload: createResponse,
+		Payload: status,
+		Err:     false,
 	}
 
 	select {

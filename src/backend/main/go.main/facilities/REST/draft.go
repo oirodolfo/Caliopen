@@ -61,6 +61,14 @@ func (rest *RESTfacility) SendDraft(user_info *UserInfo, msg_id string) (msg *Me
 			UserId:     user_info.User_id,
 			IdentityId: draft.UserIdentities[0].String(), // handle one identity for now
 		}
+	case MastodonProtocol:
+		natsTopic = Nats_outMastodon_topicKey
+		order = BrokerOrder{
+			Order:      nats_order,
+			MessageId:  msg_id,
+			UserId:     user_info.User_id,
+			IdentityId: draft.UserIdentities[0].String(), // handle one identity for now
+		}
 	default:
 		return nil, fmt.Errorf("[SendDraft] no handler for <%s> protocol", protocol)
 	}
