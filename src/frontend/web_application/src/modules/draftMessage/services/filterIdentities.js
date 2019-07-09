@@ -1,4 +1,4 @@
-import { IDENTITY_TYPE_TWITTER } from '../../../modules/contact';
+import { IDENTITY_TYPE_TWITTER, IDENTITY_TYPE_MASTODON } from '../../contact';
 import { getIdentityProtocol } from './getIdentityProtocol';
 
 const getParticipantsContactsExceptUser = ({ contacts, participants, user }) => participants
@@ -36,6 +36,13 @@ const getAvailableProtocolsForTheContact = ({ contact }) => {
     contact.identities.filter(identity => identity.type === IDENTITY_TYPE_TWITTER).length >= 1
   ) {
     protocols.push('twitter');
+  }
+
+  if (
+    contact.identities &&
+    contact.identities.filter(identity => identity.type === IDENTITY_TYPE_MASTODON).length >= 1
+  ) {
+    protocols.push('mastodon');
   }
 
   return protocols;
